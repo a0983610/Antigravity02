@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.IO;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
+using Antigravity02.Agents;
+using Antigravity02.Tools;
 
 namespace Antigravity02
 {
@@ -11,153 +12,251 @@ namespace Antigravity02
     {
         static async Task Main(string[] args)
         {
-            // 請替換為您的 API Key
-            string apiKey = "YOUR_GEMINI_API_KEY";
+            // 確保環境變量檔案存在
+            EnsureEnvFileExists();
 
-            // 本地功能測試 (當沒有設定 API Key 時)
-            if (apiKey == "YOUR_GEMINI_API_KEY")
+            // --- 配置獲取 ---
+            string apiKey = GetApiKey();
+            string smartModelRaw = GetConfig("GEMINI_SMART_MODEL") ?? GetConfig("GEMINI_MODEL");
+            string fastModelRaw = GetConfig("GEMINI_FAST_MODEL") ?? GetConfig("GEMINI_MODEL");
+            
+            bool noModelConfigured = string.IsNullOrEmpty(smartModelRaw) && string.IsNullOrEmpty(fastModelRaw);
+
+            // 使用者指定預設為 gemini-2.5-flash
+            string smartModel = smartModelRaw ?? "gemini-2.5-flash";
+            string fastModel = fastModelRaw ?? "gemini-2.5-flash";
+            // ----------------
+
+            Console.WriteLine("=== AI Automation Assistant ===");
+
+            if (string.IsNullOrEmpty(apiKey))
             {
-                Console.WriteLine("--- 啟動本地工具測試模式 ---");
-                var tools = new FileTools();
-
-                Console.WriteLine("\n[測試 1: 列出檔案]");
-                string list = tools.ListFiles();
-                Console.WriteLine(list);
-
-                Console.WriteLine("\n[測試 2: 讀取檔案 (test_file.txt)]");
-                string content = tools.ReadFile("test_file.txt");
-                Console.WriteLine("內容內容:\n" + content);
-
-                Console.WriteLine("\n[測試 3: 儲存產出]");
-                string saveResult = tools.SaveFileOutput("test_output.txt", "這是由本地測試產出的內容。時間: " + DateTime.Now);
-                Console.WriteLine(saveResult);
-
-                Console.WriteLine("\n[測試 4: 檢查產出資料夾]");
-                Console.WriteLine(tools.ListFiles("AI_Outputs"));
-
-                Console.WriteLine("\n--- 本地工具測試完成 ---");
-                Console.WriteLine("請在 Program.cs 中設定有效的 Gemini API Key 以測試完整的 AI 功能。");
-                Console.WriteLine("\n長按任意鍵結束...");
-                if (!Console.IsInputRedirected) { Console.ReadKey(); }
-                return;
+                Console.WriteLine("\n[Error] API Key is required to start the AI Agent.");
             }
-
-            var client = new GeminiClient(apiKey);
-            var fileToolsImpl = new FileTools();
-            var serializer = new JavaScriptSerializer();
-
-            Console.WriteLine("=== AI 檔案存取工作助手 ===");
-
-            // 1. 定義工具架構 (符合 Gemini API 規範)
-            var listFilesTool = client.CreateFunctionDeclaration(
-                "list_files",
-                "列出指定資料夾路徑下的所有檔案與子資料夾。若不指定則列出目前的根目錄。",
-                new
+            else
+            {
+                if (noModelConfigured)
                 {
-                    type = "object",
-                    properties = new
+                    // 不顯示在介面，而是默默更新 .env 檔案
+                    await UpdateEnvWithModelListAsync(apiKey);
+                }
+
+                var agent = new UniversalAgent(apiKey, smartModel, fastModel);
+                
+                // 顯示目前使用的模型
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"[Config] Smart Model: {smartModel}");
+                Console.WriteLine($"[Config] Fast Model : {fastModel}");
+                Console.ResetColor();
+
+                var ui = new ConsoleUI();
+
+                while (true)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.Write("\nUser: ");
+                    Console.ResetColor();
+                    
+                    string input = Console.ReadLine();
+                    if (string.IsNullOrEmpty(input)) continue;
+
+                    // --- 指令處理 ---
+                    if (CommandManager.TryHandleCommand(input, agent, out bool shouldExit))
                     {
-                        subPath = new { type = "string", description = "相對路徑名稱 (選填)" }
+                        if (shouldExit) break;
+                        continue;
+                    }
+                    // -----------------------
+
+                    try
+                    {
+                        await agent.ExecuteAsync(input, ui);
+                    }
+                    catch (Exception ex)
+                    {
+                        UsageLogger.LogError($"System Error: {ex.Message}");
+                        ui.ReportError(ex.Message);
                     }
                 }
-            );
+            }
 
-            var readFileTool = client.CreateFunctionDeclaration(
-                "read_file",
-                "讀取特定檔案的內容。支援 .txt, .docx, .cs 等格式。不可進行修改。",
-                new
-                {
-                    type = "object",
-                    properties = new
-                    {
-                        fileName = new { type = "string", description = "要讀取的完整檔名 (包含副檔名)" }
-                    },
-                    required = new[] { "fileName" }
-                }
-            );
+            Console.WriteLine("\nProgram finished.");
+            if (!Console.IsInputRedirected) { Console.ReadKey(); }
+        }
 
-            var saveOutputTool = client.CreateFunctionDeclaration(
-                "save_ai_output",
-                "將 AI 產出的內容儲存為本機文件檔案。",
-                new
-                {
-                    type = "object",
-                    properties = new
-                    {
-                        fileName = new { type = "string", description = "儲存的檔名 (例如: report.txt)" },
-                        content = new { type = "string", description = "要寫入檔案的文字內容" },
-                        subFolderName = new { type = "string", description = "子資料夾名稱，預設為 AI_Outputs" }
-                    },
-                    required = new[] { "fileName", "content" }
-                }
-            );
+        static async Task UpdateEnvWithModelListAsync(string apiKey)
+        {
+            const string envFileName = ".env";
+            string envPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, envFileName);
 
-            var allTools = client.DefineTools(listFilesTool, readFileTool, saveOutputTool);
-
-            // 2. 測試對話範例
-            Console.WriteLine("\n請輸入您的需求 (例如：'幫我列出目前有哪些檔案' 或 '讀取 readme.txt 並總結後存成 summary.txt')：");
-            string userPrompt = Console.ReadLine();
+            if (!File.Exists(envPath)) return;
 
             try
             {
-                Console.WriteLine("\n[正在發送請求至 Gemini...]");
-                string rawJson = await client.GenerateContentAsync(userPrompt, allTools.ToList<object>());
+                string envContent = File.ReadAllText(envPath);
+                // 如果已經有模型列表註解，就不重複查詢寫入
+                if (envContent.Contains("# --- 自動查詢可用模型列表 ---")) return;
 
-                // 3. 處理 Function Calling 邏輯
-                var data = serializer.Deserialize<Dictionary<string, object>>(rawJson);
-                var candidates = data["candidates"] as System.Collections.ArrayList;
-                var firstCandidate = candidates[0] as Dictionary<string, object>;
-                var content = firstCandidate["content"] as Dictionary<string, object>;
-                var parts = content["parts"] as System.Collections.ArrayList;
+                var tempClient = new Antigravity02.AIClient.GeminiClient(apiKey);
+                string json = await tempClient.ListModelsAsync();
 
-                foreach (Dictionary<string, object> part in parts)
+                var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+                var data = serializer.Deserialize<Dictionary<string, object>>(json);
+                
+                var modelDocs = new System.Text.StringBuilder();
+                modelDocs.AppendLine("\n# --- 自動查詢可用模型列表 ---");
+
+                if (data.ContainsKey("models"))
                 {
-                    if (part.ContainsKey("functionCall"))
+                    var models = data["models"] as System.Collections.ArrayList;
+                    foreach (Dictionary<string, object> model in models)
                     {
-                        var call = part["functionCall"] as Dictionary<string, object>;
-                        string funcName = call["name"].ToString();
-                        var argsDict = call["args"] as Dictionary<string, object>;
-
-                        Console.WriteLine($"\n>> AI 請求執行工具: {funcName}");
-
-                        string result = "";
-                        switch (funcName)
-                        {
-                            case "list_files":
-                                string subPath = argsDict.ContainsKey("subPath") ? argsDict["subPath"].ToString() : "";
-                                result = fileToolsImpl.ListFiles(subPath);
-                                break;
-                            case "read_file":
-                                string fn = argsDict["fileName"].ToString();
-                                result = fileToolsImpl.ReadFile(fn);
-                                break;
-                            case "save_ai_output":
-                                string sFn = argsDict["fileName"].ToString();
-                                string sContent = argsDict["content"].ToString();
-                                string sFolder = argsDict.ContainsKey("subFolderName") ? argsDict["subFolderName"].ToString() : "AI_Outputs";
-                                result = fileToolsImpl.SaveFileOutput(sFn, sContent, sFolder);
-                                break;
-                        }
-
-                        Console.WriteLine($">> 執行結果: \n{result}");
+                        string name = model["name"].ToString().Replace("models/", "");
+                        string displayName = model["displayName"].ToString();
                         
-                        // 注意：在實際完整的對話流程中，您應該將此 result 回傳給 Gemini 以完成對話。
-                        // 這裡示範到此，讓您能確認 local 端的工具運作是否正確。
-                        Console.WriteLine("\n[工具執行完畢]");
+                        var methods = model["supportedGenerationMethods"] as System.Collections.ArrayList;
+                        if (methods != null && methods.Contains("generateContent"))
+                        {
+                            modelDocs.AppendLine($"# {name,-25} : {displayName}");
+                        }
                     }
-                    else if (part.ContainsKey("text"))
+                }
+                modelDocs.AppendLine("# ------------------------------");
+
+                // 插入到模型設置區塊之前
+                if (envContent.Contains("GEMINI_MODEL="))
+                {
+                    envContent = envContent.Replace("GEMINI_MODEL=", modelDocs.ToString() + "GEMINI_MODEL=");
+                }
+                else
+                {
+                    envContent += modelDocs.ToString();
+                }
+
+                File.WriteAllText(envPath, envContent);
+                Console.WriteLine($"[System] 已自動查詢可用模型列表，並寫入 {envFileName} 供參考。");
+            }
+            catch
+            {
+                // 靜默失敗，不影響主程式運行
+            }
+        }
+
+        static string GetApiKey() => GetConfig("GEMINI_API_KEY") ?? PromptForApiKey();
+        
+        static string GetConfig(string keyName)
+        {
+            const string envFileName = ".env";
+
+            // 1. 優先從系統環境變量讀取
+            string value = Environment.GetEnvironmentVariable(keyName);
+            if (!string.IsNullOrEmpty(value)) return value;
+
+            // 2. 嘗試從本地 .env 檔案讀取
+            string envPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, envFileName);
+            if (File.Exists(envPath))
+            {
+                var lines = File.ReadAllLines(envPath);
+                foreach (var line in lines)
+                {
+                    var trimmed = line.Trim();
+                    if (trimmed.StartsWith("#") || string.IsNullOrEmpty(trimmed)) continue; // 跳過註解與空行
+                    string prefix = keyName + "=";
+                    if (trimmed.StartsWith(prefix))
                     {
-                        Console.WriteLine($"\nGemini 回應: {part["text"]}");
+                        string result = trimmed.Substring(prefix.Length).Trim().Trim('\'', '"');
+                        return string.IsNullOrEmpty(result) ? null : result; // 空值視為未設定
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"\n發生錯誤: {ex.Message}");
-            }
+            return null;
+        }
 
-            Console.WriteLine("\n任務展示完成，按任意鍵結束...");
-            if (!Console.IsInputRedirected) { Console.ReadKey(); }
+        static void EnsureEnvFileExists()
+        {
+            const string envFileName = ".env";
+            string envPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, envFileName);
+
+            if (!File.Exists(envPath))
+            {
+                string content = "# Gemini API Key (必填)\n" +
+                                 "GEMINI_API_KEY=\n\n" +
+                                 "# 推理模型設置 (選填，沒填會使用預設值)\n" +
+                                 "# 也可以只設 GEMINI_MODEL 讓所有模組共用\n" +
+                                 "GEMINI_MODEL=\n" +
+                                 "GEMINI_SMART_MODEL=\n" +
+                                 "GEMINI_FAST_MODEL=\n";
+                
+                try
+                {
+                    File.WriteAllText(envPath, content);
+                    Console.WriteLine("[System] 已自動創建 .env 配置文件，請填入 API Key 後重新啟動。");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[System Error] 無法創建 .env 檔案: {ex.Message}");
+                }
+            }
+        }
+
+        static string PromptForApiKey()
+        {
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine("\n[API Key Not Found]");
+            Console.WriteLine("Please set environment variable 'GEMINI_API_KEY' or create '.env' file.");
+            Console.Write("Or enter API Key now: ");
+            Console.ResetColor();
+
+            return Console.ReadLine()?.Trim();
+        }
+    }
+
+    public class ConsoleUI : IAgentUI
+    {
+        public void ReportThinking(int iteration, string modelName)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"\n[Thinking Iteration {iteration} ({modelName})] ...");
+            Console.ResetColor();
+        }
+
+        public void ReportToolCall(string toolName, string args)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"Action: {toolName}");
+            Console.ResetColor();
+        }
+
+        public void ReportToolResult(string resultSummary)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            string text = resultSummary ?? "(no result)";
+            string summary = text.Length > 100 ? text.Substring(0, 100) + "..." : text;
+            Console.WriteLine($"Result: {summary}");
+            Console.ResetColor();
+        }
+
+        public void ReportTextResponse(string text, string modelName)
+        {
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine($"\nAI ({modelName}): {text}");
+            Console.ResetColor();
+        }
+
+        public void ReportError(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"\nError: {message}");
+            Console.ResetColor();
+        }
+
+        public Task<bool> PromptContinueAsync(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write($"\n[PROMPT] {message} (Y/N): ");
+            Console.ResetColor();
+            string input = Console.ReadLine()?.Trim().ToLower();
+            return Task.FromResult(input == "y" || input == "yes");
         }
     }
 }

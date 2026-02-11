@@ -46,9 +46,20 @@
     <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GeminiClient.cs" />
-    <Compile Include="FileTools.cs" />
+    <Compile Include="AIClient\IAIClient.cs" />
+    <Compile Include="AIClient\GeminiClient.cs" />
+    <Compile Include="Tools\FileTools.cs" />
+    <Compile Include="Tools\HttpTools.cs" />
+    <Compile Include="Agents\IAgentUI.cs" />
+    <Compile Include="Agents\IAgentModule.cs" />
+    <Compile Include="Agents\BaseAgent.cs" />
+    <Compile Include="Tools\UsageLogger.cs" />
+    <Compile Include="Agents\FileModule.cs" />
+    <Compile Include="Agents\HttpModule.cs" />
+    <Compile Include="Agents\AIControlModule.cs" />
+    <Compile Include="Agents\UniversalAgent.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="CommandManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
