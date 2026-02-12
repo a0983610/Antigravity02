@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Antigravity02.Agents;
 using Antigravity02.Tools;
+using Antigravity02.UI;
 
 namespace Antigravity02
 {
@@ -45,8 +45,15 @@ namespace Antigravity02
                 
                 // 顯示目前使用的模型
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"[Config] Smart Model: {smartModel}");
-                Console.WriteLine($"[Config] Fast Model : {fastModel}");
+                if (smartModel == fastModel)
+                {
+                    Console.WriteLine($"[Config] Model: {smartModel}");
+                }
+                else
+                {
+                    Console.WriteLine($"[Config] Smart Model: {smartModel}");
+                    Console.WriteLine($"[Config] Fast Model : {fastModel}");
+                }
                 Console.ResetColor();
 
                 var ui = new ConsoleUI();
@@ -76,6 +83,16 @@ namespace Antigravity02
                     {
                         UsageLogger.LogError($"System Error: {ex.Message}");
                         ui.ReportError(ex.Message);
+                        
+                        // 系統級錯誤也儲存備份
+                        if (agent.SaveChatHistory("system_error_backup.json"))
+                        {
+                            ui.ReportError("系統發生非預期錯誤，對話紀錄已備份至 system_error_backup.json");
+                        }
+                        else
+                        {
+                            ui.ReportError("系統發生非預期錯誤，且無法備份對話紀錄。");
+                        }
                     }
                 }
             }
@@ -208,55 +225,6 @@ namespace Antigravity02
             Console.ResetColor();
 
             return Console.ReadLine()?.Trim();
-        }
-    }
-
-    public class ConsoleUI : IAgentUI
-    {
-        public void ReportThinking(int iteration, string modelName)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"\n[Thinking Iteration {iteration} ({modelName})] ...");
-            Console.ResetColor();
-        }
-
-        public void ReportToolCall(string toolName, string args)
-        {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"Action: {toolName}");
-            Console.ResetColor();
-        }
-
-        public void ReportToolResult(string resultSummary)
-        {
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            string text = resultSummary ?? "(no result)";
-            string summary = text.Length > 100 ? text.Substring(0, 100) + "..." : text;
-            Console.WriteLine($"Result: {summary}");
-            Console.ResetColor();
-        }
-
-        public void ReportTextResponse(string text, string modelName)
-        {
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine($"\nAI ({modelName}): {text}");
-            Console.ResetColor();
-        }
-
-        public void ReportError(string message)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"\nError: {message}");
-            Console.ResetColor();
-        }
-
-        public Task<bool> PromptContinueAsync(string message)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.Write($"\n[PROMPT] {message} (Y/N): ");
-            Console.ResetColor();
-            string input = Console.ReadLine()?.Trim().ToLower();
-            return Task.FromResult(input == "y" || input == "yes");
         }
     }
 }

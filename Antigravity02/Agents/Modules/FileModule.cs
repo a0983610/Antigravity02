@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Antigravity02.AIClient;
 using Antigravity02.Tools;
+using Antigravity02.UI;
 
 namespace Antigravity02.Agents
 {
@@ -31,7 +32,7 @@ namespace Antigravity02.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "read_file",
-                "讀取特定檔案的內容。支援 .txt, .docx, .cs 等格式。讀取筆記請用 AI_Workspace/檔名.txt。" + (_hasFastModel ? "若檔案過大，可指定 summaryQuery 來擷取重點。" : ""),
+                "讀取特定檔案的內容。支援 .txt, .md, .csv, .json, .docx, .cs 等文字格式，也支援圖片 (.png, .jpg, .jpeg, .gif, .bmp, .webp)。讀取 AI 儲存的檔案請加上 AI_Workspace/ 前綴。" + (_hasFastModel ? "若檔案過大，可指定 summaryQuery 來擷取重點。" : ""),
                 _hasFastModel
                     ? (object)new
                     {
@@ -52,14 +53,14 @@ namespace Antigravity02.Agents
             );
 
             yield return client.CreateFunctionDeclaration(
-                "save_note",
-                "將資訊儲存為 .txt 筆記至 AI_Workspace。預設會將內容附加到檔案末尾，若需覆蓋請設 append=false。",
+                "write_file",
+                "將資訊儲存為文字檔至 AI_Workspace。支援各種文字格式 (如 .txt, .md, .json, .cs 等)。預設會將內容附加到檔案末尾，若需覆蓋請設 append=false。",
                 new
                 {
                     type = "object",
                     properties = new
                     {
-                        fileName = new { type = "string", description = "筆記檔名 (自動加 .txt)" },
+                        fileName = new { type = "string", description = "檔名 (例如 notes.txt)" },
                         content = new { type = "string", description = "內容" },
                         append = new { type = "boolean", description = "true=附加內容到最後 (預設); false=覆蓋所有內容" }
                     },
@@ -69,7 +70,7 @@ namespace Antigravity02.Agents
 
         }
 
-        public async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args)
+        public async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
         {
             switch (funcName)
             {
@@ -91,9 +92,9 @@ namespace Antigravity02.Agents
                         return summary;
                     }
                     return fileContent;
-                case "save_note":
+                case "write_file":
                     bool append = args.ContainsKey("append") ? Convert.ToBoolean(args["append"]) : true;
-                    return _fileTools.SaveNote(
+                    return _fileTools.WriteFile(
                         args["fileName"].ToString(),
                         args["content"].ToString(),
                         append);

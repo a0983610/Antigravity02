@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using Antigravity02.AIClient;
 using Antigravity02.Tools;
+using Antigravity02.UI;
 
 namespace Antigravity02.Agents
 {
@@ -37,6 +38,7 @@ namespace Antigravity02.Agents
             if (wasSmart != _useSmartModel)
             {
                 OnModelModeChanged();
+                _modelSwitchHappenedInThisTurn = true; // 標記發生切換
             }
         }
 
@@ -50,6 +52,7 @@ namespace Antigravity02.Agents
 
         protected List<object> ToolDeclarations;
         protected List<object> ChatHistory; // 新增：保存完整對話紀錄
+        private bool _modelSwitchHappenedInThisTurn = false; // 追蹤此輪是否觸發模型切換
 
         protected BaseAgent(string apiKey, string smartModel, string fastModel)
         {
@@ -65,6 +68,7 @@ namespace Antigravity02.Agents
         /// </summary>
         public async Task ExecuteAsync(string userPrompt, IAgentUI ui)
         {
+            _modelSwitchHappenedInThisTurn = false;
             // 將新的使用者訊息加入歷史紀錄
             ChatHistory.Add(new { role = "user", parts = new[] { new { text = userPrompt } } });
 
@@ -74,6 +78,7 @@ namespace Antigravity02.Agents
 
             while (continueLoop && currentIteration < maxIterations)
             {
+                _modelSwitchHappenedInThisTurn = false; 
                 currentIteration++;
                 // 每次 iteration 開始前，Client 目前的模型即為此次使用的模型
                 string currentModelName = Client.ModelName;
@@ -123,6 +128,7 @@ namespace Antigravity02.Agents
 
                     bool hasFunctionCall = false;
                     var toolResponseParts = new List<object>();
+                    var pendingImageDataList = new List<Tuple<string, string>>(); // (mimeType, base64Data)
 
                     foreach (Dictionary<string, object> part in parts)
                     {
@@ -141,24 +147,72 @@ namespace Antigravity02.Agents
                             ui.ReportToolCall(funcName, Serializer.Serialize(argsDict));
 
                             // 執行具體的工具邏輯 (由子類別實作)
-                            string result = await ProcessToolCallAsync(funcName, argsDict);
+                            string result = await ProcessToolCallAsync(funcName, argsDict, ui);
                             UsageLogger.LogAction(funcName, result); // 紀錄行動
-                            ui.ReportToolResult(result);
 
-                            toolResponseParts.Add(new
+                            // 判斷是否含有圖片資料，若有則拆為多個 parts
+                            var resultParts = BuildToolResponseParts(funcName, result);
+                            toolResponseParts.AddRange(resultParts);
+
+                            // 收集圖片資料，稍後加入 user message
+                            var imageData = ExtractImageData(result);
+                            if (imageData != null)
                             {
-                                functionResponse = new
-                                {
-                                    name = funcName,
-                                    response = new { content = result }
-                                }
-                            });
+                                pendingImageDataList.Add(imageData);
+                            }
+
+                            // UI 回報結果（顯示給使用者的不含 base64）
+                            if (result.StartsWith("[IMAGE_BASE64:"))
+                            {
+                                // 取得描述文字部分（圖片尺寸等資訊）
+                                int newlineIdx = result.IndexOf('\n');
+                                string sizeInfo = newlineIdx >= 0 ? result.Substring(newlineIdx + 1) : "圖片已讀取";
+                                ui.ReportToolResult($"圖片已成功讀取並傳送給 AI\n{sizeInfo}");
+                            }
+                            else
+                            {
+                                ui.ReportToolResult(result);
+                            }
                         }
                     }
 
                     if (hasFunctionCall)
                     {
                         ChatHistory.Add(new { role = "function", parts = toolResponseParts });
+
+                        // 若有圖片資料，額外加入 user message 包含 inlineData
+                        // Gemini API 要求圖片必須在 user 角色中
+                        if (pendingImageDataList.Count > 0)
+                        {
+                            var imageParts = new List<object>();
+                            foreach (var imgData in pendingImageDataList)
+                            {
+                                imageParts.Add(new
+                                {
+                                    inline_data = new
+                                    {
+                                        mime_type = imgData.Item1,
+                                        data = imgData.Item2
+                                    }
+                                });
+                            }
+                            imageParts.Add(new { text = "以上是透過 read_file 工具讀取的圖片，請根據圖片內容進行分析或回應。" });
+                            ChatHistory.Add(new { role = "user", parts = imageParts });
+                        }
+
+                        // 如果此輪發生了模型切換，且這輪主要是為了切換模型 (只有單一工具呼叫)
+                        // 我們可以將此輪從歷史紀錄中移除，讓 AI 在下一輪（新模型）重新對應原始需求
+                        if (_modelSwitchHappenedInThisTurn && toolResponseParts.Count == 1)
+                        {
+                            // 移除剛才加入的 function response 和 model content
+                            if (ChatHistory.Count >= 2)
+                            {
+                                ChatHistory.RemoveRange(ChatHistory.Count - 2, 2);
+                            }
+                            
+                            // 重設標記，繼續循環會使用新模型重新請求
+                            _modelSwitchHappenedInThisTurn = false;
+                        }
                     }
                     else
                     {
@@ -169,6 +223,29 @@ namespace Antigravity02.Agents
                 {
                     UsageLogger.LogError($"Agent Error: {ex.Message}");
                     ui.ReportError(ex.Message);
+                    
+                    // 清理可能殘留的不完整回應 (model response 已加入但 function response 尚未加入)
+                    // ChatHistory 的合法結尾應為 user 或 function，若最後一筆是 model 回應則為不完整狀態
+                    if (ChatHistory.Count > 0)
+                    {
+                        var lastEntry = ChatHistory[ChatHistory.Count - 1] as Dictionary<string, object>;
+                        if (lastEntry != null && lastEntry.ContainsKey("role") && lastEntry["role"]?.ToString() == "model")
+                        {
+                            ChatHistory.RemoveAt(ChatHistory.Count - 1);
+                        }
+                    }
+                    
+                    // 發生錯誤時，自動備份對話紀錄，方便使用者之後載入續行
+                    string recoveryPath = "recovery_history.json";
+                    if (SaveChatHistory(recoveryPath))
+                    {
+                        ui.ReportError($"對話紀錄已自動備份至 {recoveryPath}。您可以使用 /load {recoveryPath} 來載入並重試。");
+                    }
+                    else
+                    {
+                        ui.ReportError("無法備份對話紀錄。");
+                    }
+                    
                     break;
                 }
 
@@ -183,6 +260,11 @@ namespace Antigravity02.Agents
                     else
                     {
                         ui.ReportError("任務已被使用者中斷。");
+                        
+                        string recoveryPath = "interrupted_history.json";
+                        SaveChatHistory(recoveryPath);
+                        ui.ReportError($"目前對話已存檔至 {recoveryPath}。");
+                        
                         continueLoop = false;
                     }
                 }
@@ -192,43 +274,135 @@ namespace Antigravity02.Agents
         /// <summary>
         /// 子類別必須實作此方法來處理特定的工具呼叫
         /// </summary>
-        protected abstract Task<string> ProcessToolCallAsync(string funcName, Dictionary<string, object> args);
+        protected abstract Task<string> ProcessToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui);
 
-        public void SaveChatHistory(string filePath)
+        /// <summary>
+        /// 清除對話紀錄，開始新對話
+        /// </summary>
+        public void ClearChatHistory()
+        {
+            ChatHistory.Clear();
+        }
+
+        public bool SaveChatHistory(string filePath)
         {
             try
             {
                 string json = Serializer.Serialize(ChatHistory);
                 File.WriteAllText(filePath, json);
+                return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Error] Failed to save chat history: {ex.Message}");
+                UsageLogger.LogError($"SaveChatHistory Error: {ex.Message}");
+                return false;
             }
         }
 
-        public void LoadChatHistory(string filePath)
+        public bool LoadChatHistory(string filePath)
         {
             try
             {
-                if (File.Exists(filePath))
+                if (!File.Exists(filePath))
                 {
-                    string json = File.ReadAllText(filePath);
-                    var history = Serializer.Deserialize<List<object>>(json);
-                    if (history != null)
-                    {
-                        ChatHistory = history;
-                    }
+                    UsageLogger.LogError($"LoadChatHistory Error: File not found: {filePath}");
+                    return false;
                 }
-                else
+
+                string json = File.ReadAllText(filePath);
+                var history = Serializer.Deserialize<List<object>>(json);
+                if (history != null)
                 {
-                    Console.WriteLine($"[Error] File not found: {filePath}");
+                    ChatHistory.Clear();
+                    ChatHistory.AddRange(history);
+                    return true;
                 }
+                return false;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Error] Failed to load chat history: {ex.Message}");
+                UsageLogger.LogError($"LoadChatHistory Error: {ex.Message}");
+                return false;
             }
+        }
+
+        /// <summary>
+        /// 取得目前的對話紀錄 (唯讀)，供外部顯示用
+        /// </summary>
+        public ReadOnlyCollection<object> GetChatHistory()
+        {
+            return ChatHistory.AsReadOnly();
+        }
+
+        /// <summary>
+        /// 建立工具回應的 parts，圖片遞補為 functionResponse + inlineData
+        /// </summary>
+        private List<object> BuildToolResponseParts(string funcName, string result)
+        {
+            var parts = new List<object>();
+
+            // 檢查是否包含圖片 base64 資料
+            if (result.StartsWith("[IMAGE_BASE64:"))
+            {
+                // 解析格式: [IMAGE_BASE64:mime_type:base64data]\n[描述文字]
+                int firstClose = result.IndexOf(']');
+                if (firstClose > 0)
+                {
+                    string marker = result.Substring(1, firstClose - 1); // IMAGE_BASE64:mime:data
+                    string description = firstClose + 1 < result.Length ? result.Substring(firstClose + 1).Trim() : "圖片已讀取";
+
+                    string[] markerParts = marker.Split(new[] { ':' }, 3);
+                    if (markerParts.Length == 3)
+                    {
+                        string mimeType = markerParts[1];
+                        string base64Data = markerParts[2];
+
+                        // 加入 functionResponse（文字描述）
+                        parts.Add(new
+                        {
+                            functionResponse = new
+                            {
+                                name = funcName,
+                                response = new { content = $"圖片已成功讀取。{description}。請看下方圖片內容。" }
+                            }
+                        });
+
+                        // 加入 inlineData（圖片資料）作為 user part
+                        // Gemini API 需要圖片放在 user 角色中
+                        // 所以我們先加入 function response，再在下一步加入 user message 包含圖片
+                        return parts; // 讓外層處理圖片 part
+                    }
+                }
+            }
+
+            // 一般文字回應
+            parts.Add(new
+            {
+                functionResponse = new
+                {
+                    name = funcName,
+                    response = new { content = result }
+                }
+            });
+
+            return parts;
+        }
+
+        /// <summary>
+        /// 從工具回傳結果中提取圖片 base64 資料，回傳 (mimeType, base64Data) 或 null
+        /// </summary>
+        private Tuple<string, string> ExtractImageData(string result)
+        {
+            if (!result.StartsWith("[IMAGE_BASE64:")) return null;
+
+            int firstClose = result.IndexOf(']');
+            if (firstClose <= 0) return null;
+
+            string marker = result.Substring(1, firstClose - 1);
+            string[] markerParts = marker.Split(new[] { ':' }, 3);
+            if (markerParts.Length != 3) return null;
+
+            return Tuple.Create(markerParts[1], markerParts[2]);
         }
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Antigravity02.AIClient;
+using Antigravity02.UI;
 
 namespace Antigravity02.Agents
 {
@@ -18,7 +19,8 @@ namespace Antigravity02.Agents
         /// <summary>
         /// 嘗試處理工具呼叫
         /// </summary>
+        /// <param name="ui">UI 回饋介面，若模組需要向使用者報告進度可使用</param>
         /// <returns>回傳工具執行結果，若此模組無法處理則回傳 null</returns>
-        Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args);
+        Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui);
     }
 }

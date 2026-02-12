@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace Antigravity02.Agents
+namespace Antigravity02.UI
 {
     /// <summary>
     /// 定義 AI Agent 的視覺與進度回饋介面
@@ -13,6 +13,7 @@ namespace Antigravity02.Agents
         void ReportToolResult(string resultSummary);
         void ReportTextResponse(string text, string modelName);
         void ReportError(string message);
+        void ReportInfo(string message);
         Task<bool> PromptContinueAsync(string message);
     }
 }

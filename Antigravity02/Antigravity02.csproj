@@ -35,6 +35,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -50,13 +51,15 @@
     <Compile Include="AIClient\GeminiClient.cs" />
     <Compile Include="Tools\FileTools.cs" />
     <Compile Include="Tools\HttpTools.cs" />
-    <Compile Include="Agents\IAgentUI.cs" />
-    <Compile Include="Agents\IAgentModule.cs" />
+    <Compile Include="UI\IAgentUI.cs" />
+    <Compile Include="Agents\Modules\IAgentModule.cs" />
     <Compile Include="Agents\BaseAgent.cs" />
     <Compile Include="Tools\UsageLogger.cs" />
-    <Compile Include="Agents\FileModule.cs" />
-    <Compile Include="Agents\HttpModule.cs" />
-    <Compile Include="Agents\AIControlModule.cs" />
+    <Compile Include="Agents\Modules\FileModule.cs" />
+    <Compile Include="Agents\Modules\HttpModule.cs" />
+    <Compile Include="Agents\Modules\AIControlModule.cs" />
+    <Compile Include="Agents\Modules\MultiAgentModule.cs" />
+    <Compile Include="UI\ConsoleUI.cs" />
     <Compile Include="Agents\UniversalAgent.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="CommandManager.cs" />

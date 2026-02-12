@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Antigravity02.AIClient;
 using Antigravity02.Tools;
+using Antigravity02.UI;
 
 namespace Antigravity02.Agents
 {
@@ -47,7 +48,7 @@ namespace Antigravity02.Agents
             );
         }
 
-        public async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args)
+        public async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
         {
             switch (funcName)
             {
