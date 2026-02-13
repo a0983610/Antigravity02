@@ -58,6 +58,35 @@ namespace Antigravity02
 
                 var ui = new ConsoleUI();
 
+                // --- 處理啟動參數 ---
+                if (args.Length > 0)
+                {
+                    string initialInput = string.Join(" ", args);
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    Console.WriteLine($"\n[Startup Command] Detected arguments: {initialInput}");
+                    Console.ResetColor();
+
+                    bool isCommand = CommandManager.TryHandleCommand(initialInput, agent, out bool startShouldExit);
+                    if (isCommand)
+                    {
+                        if (startShouldExit) return; // 若指令為 /exit，直接結束程式
+                    }
+                    else
+                    {
+                        // 若非指令，則視為 Prompt 直接執行
+                        try
+                        {
+                            await agent.ExecuteAsync(initialInput, ui);
+                        }
+                        catch (Exception ex)
+                        {
+                            UsageLogger.LogError($"Startup Args Error: {ex.Message}");
+                            ui.ReportError(ex.Message);
+                        }
+                    }
+                }
+                // --------------------
+
                 while (true)
                 {
                     Console.ForegroundColor = ConsoleColor.Cyan;
