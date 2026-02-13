@@ -191,6 +191,37 @@ namespace Antigravity02.Tools
             }
         }
 
+        /// <summary>
+        /// 4. 刪除檔案 (限制範圍)
+        /// </summary>
+        public string DeleteFile(string fileName)
+        {
+            try
+            {
+                if (fileName.Contains("..")) return "錯誤：格式不合法。";
+
+                string filePath = Path.GetFullPath(Path.Combine(_baseDirectory, fileName));
+
+                // 安全檢查
+                if (!filePath.StartsWith(_baseDirectory, StringComparison.OrdinalIgnoreCase))
+                    return "錯誤：超出授權範圍。";
+
+                if (!File.Exists(filePath))
+                {
+                    return $"錯誤：找不到檔案 {fileName}。";
+                }
+
+                File.Delete(filePath);
+                return $"成功：已刪除檔案 {fileName}";
+            }
+            catch (Exception ex)
+            {
+                UsageLogger.LogError($"FileTools(DeleteFile) Error: {ex.Message}");
+                return $"錯誤：無法刪除檔案。{ex.Message}";
+            }
+        }
+
+
 
         /// <summary>
         /// 簡易的 .docx 文字提取 (透過讀取 zip 內的 word/document.xml)

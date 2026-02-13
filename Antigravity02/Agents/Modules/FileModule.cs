@@ -68,6 +68,20 @@ namespace Antigravity02.Agents
                 }
             );
 
+            yield return client.CreateFunctionDeclaration(
+                "delete_file",
+                "刪除指定的檔案。請謹慎使用。刪除 AI 儲存的檔案請加上 AI_Workspace/ 前綴。",
+                new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        fileName = new { type = "string", description = "檔案路徑 (例如 AI_Workspace/notes.txt)" }
+                    },
+                    required = new[] { "fileName" }
+                }
+            );
+
         }
 
         public async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
@@ -98,6 +112,8 @@ namespace Antigravity02.Agents
                         args["fileName"].ToString(),
                         args["content"].ToString(),
                         append);
+                case "delete_file":
+                    return _fileTools.DeleteFile(args["fileName"].ToString());
                 default:
                     return null;
             }
