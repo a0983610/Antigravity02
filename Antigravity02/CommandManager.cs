@@ -82,6 +82,16 @@ namespace Antigravity02
                 return true;
             }
 
+            if (cmd.Equals("/time", StringComparison.OrdinalIgnoreCase))
+            {
+                agent.EnableTimestampHeader = !agent.EnableTimestampHeader;
+                string status = agent.EnableTimestampHeader ? "ON" : "OFF";
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"[System] Timestamp header is now {status}.");
+                Console.ResetColor();
+                return true;
+            }
+
             // 如果是 / 開頭但未知的指令，提示使用者
             Console.WriteLine($"[System] Unknown command: {cmd}. Type /help for list of commands.");
             return true;
@@ -94,6 +104,7 @@ namespace Antigravity02
             Console.WriteLine("  /new          : Start a new conversation (clear chat history)");
             Console.WriteLine("  /save [path]  : Save chat history to file (default: chat_history.json)");
             Console.WriteLine("  /load [path]  : Load chat history from file (default: chat_history.json)");
+            Console.WriteLine("  /time         : Toggle timestamp header for user messages");
             Console.WriteLine("  /help         : Show this help message");
             Console.WriteLine("  /exit         : Exit the program");
             Console.WriteLine("==========================\n");

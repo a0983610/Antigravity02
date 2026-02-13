@@ -54,6 +54,9 @@ namespace Antigravity02.Agents
         protected List<object> ChatHistory; // 新增：保存完整對話紀錄
         private bool _modelSwitchHappenedInThisTurn = false; // 追蹤此輪是否觸發模型切換
 
+        // 新增：動態開關時間戳記
+        public bool EnableTimestampHeader { get; set; } = true;
+
         protected BaseAgent(string apiKey, string smartModel, string fastModel)
         {
             SmartClient = new GeminiClient(apiKey, smartModel);
@@ -69,8 +72,16 @@ namespace Antigravity02.Agents
         public async Task ExecuteAsync(string userPrompt, IAgentUI ui)
         {
             _modelSwitchHappenedInThisTurn = false;
+            
+            // 根據開關決定是否加上時間戳記
+            string finalPrompt = userPrompt;
+            if (EnableTimestampHeader)
+            {
+                finalPrompt = $"[Current Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}]\n{userPrompt}";
+            }
+
             // 將新的使用者訊息加入歷史紀錄
-            ChatHistory.Add(new { role = "user", parts = new[] { new { text = userPrompt } } });
+            ChatHistory.Add(new { role = "user", parts = new[] { new { text = finalPrompt } } });
 
             bool continueLoop = true;
             int currentIteration = 0;
