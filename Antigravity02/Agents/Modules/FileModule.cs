@@ -82,6 +82,22 @@ namespace Antigravity02.Agents
                 }
             );
 
+            yield return client.CreateFunctionDeclaration(
+                "update_file_line",
+                "修改文字檔中的特定行內容。行號從 1 開始。",
+                new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        fileName = new { type = "string", description = "檔名 (例如 AI_Workspace/notes.txt)" },
+                        lineNumber = new { type = "integer", description = "要修改的行號 (1-based)" },
+                        newContent = new { type = "string", description = "該行的新內容" }
+                    },
+                    required = new[] { "fileName", "lineNumber", "newContent" }
+                }
+            );
+
         }
 
         public async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
@@ -114,6 +130,10 @@ namespace Antigravity02.Agents
                         append);
                 case "delete_file":
                     return _fileTools.DeleteFile(args["fileName"].ToString());
+                case "update_file_line":
+                    int lineNum = Convert.ToInt32(args["lineNumber"]);
+                    string newContent = args["newContent"].ToString();
+                    return _fileTools.UpdateFileLine(args["fileName"].ToString(), lineNum, newContent);
                 default:
                     return null;
             }
