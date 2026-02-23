@@ -63,6 +63,7 @@
     <Compile Include="Agents\UniversalAgent.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="CommandManager.cs" />
+    <Compile Include="Config\AgentConfig.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

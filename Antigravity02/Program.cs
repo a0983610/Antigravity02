@@ -1,4 +1,5 @@
 ﻿using System;
+using Antigravity02.Config;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -41,7 +42,12 @@ namespace Antigravity02
                     await UpdateEnvWithModelListAsync(apiKey);
                 }
 
-                var agent = new UniversalAgent(apiKey, smartModel, fastModel);
+                var agent = new UniversalAgent(
+                    apiKey, 
+                    smartModel, 
+                    fastModel, 
+                    Antigravity02.Config.AgentConfig.GetSystemInstruction()
+                );
                 
                 // 顯示目前使用的模型
                 Console.ForegroundColor = ConsoleColor.Cyan;

@@ -12,7 +12,7 @@ namespace Antigravity02.Agents
     {
         private readonly List<IAgentModule> _modules = new List<IAgentModule>();
 
-        public UniversalAgent(string apiKey, string smartModel, string fastModel) : base(apiKey, smartModel, fastModel)
+        public UniversalAgent(string apiKey, string smartModel, string fastModel, string systemInstruction = null) : base(apiKey, smartModel, fastModel)
         {
             // 在此註冊所有模組
             // 只有 Smart 和 Fast 為不同模型時，才啟用摘要功能（避免浪費相同模型的 API 呼叫）
@@ -25,7 +25,7 @@ namespace Antigravity02.Agents
             // RegisterModule(new WebSearchModule());
             // RegisterModule(new DatabaseModule());
             
-            SystemInstruction = "你是一個高效能的自動化主控 AI，負責調度各種工具與專家來協助使用者。你可以操作檔案、發送 HTTP 請求，或使用 'consult_expert' 諮詢特定領域的 AI 專家來獲得深度建議。請專業且準確地回應。";
+            SystemInstruction = systemInstruction ?? "";
             
             InitializeToolDeclarations();
         }
