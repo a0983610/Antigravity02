@@ -25,6 +25,9 @@ namespace Antigravity02.Agents
     {
         private readonly IAIClient _client;
         private readonly JavaScriptSerializer _serializer = new JavaScriptSerializer();
+        private readonly List<object> _expertToolDeclarations = new List<object>();
+        private readonly FileModule _fileModule;
+        private readonly HttpModule _httpModule;
 
         /// <summary>
         /// 以 expert_name 為 Key 管理多個專家 Session
@@ -34,6 +37,20 @@ namespace Antigravity02.Agents
         public MultiAgentModule(string apiKey, string modelName)
         {
             _client = new GeminiClient(apiKey, modelName);
+            
+            // 初始化專家可用工具模組
+            _fileModule = new FileModule(null); // 專家暫不支援快速模型摘要
+            _httpModule = new HttpModule();
+
+            // 收集工具宣告
+            var allDeclarations = new List<object>();
+            allDeclarations.AddRange(_fileModule.GetToolDeclarations(_client));
+            allDeclarations.AddRange(_httpModule.GetToolDeclarations(_client));
+            
+            if (allDeclarations.Count > 0)
+            {
+                _expertToolDeclarations = new List<object>(_client.DefineTools(allDeclarations.ToArray()));
+            }
         }
 
         public IEnumerable<object> GetToolDeclarations(IAIClient client)
@@ -107,7 +124,7 @@ namespace Antigravity02.Agents
         {
             ExpertSession session = null;
             bool isNewSession = false;
-            bool historyAdded = false;
+            int historySnapshot = 0;
 
             try
             {
@@ -148,26 +165,36 @@ namespace Antigravity02.Agents
                 ui.ReportInfo($"[Expert: {expertName}] 提問: {Truncate(question, 120)}");
                 ui.ReportInfo($"[Expert: {expertName}] 等待回應中...");
 
+                // 記錄快照點，用於異常時回滾
+                historySnapshot = session.History.Count;
+
                 // 將使用者問題加入此專家的對話歷史
                 session.History.Add(new { role = "user", parts = new[] { new { text = question } } });
-                historyAdded = true;
 
-                // 建立 API 請求 (使用完整的對話歷史)
-                var request = new GenerateContentRequest
+                int maxIterations = 5;
+                int iterations = 0;
+                string finalResponseText = null;
+
+                while (iterations < maxIterations)
                 {
-                    SystemInstruction = session.Role,
-                    Contents = session.History,
-                    Tools = null // 專家暫時不給予額外工具
-                };
+                    iterations++;
 
-                string responseJson = await _client.GenerateContentAsync(request);
+                    // 建立 API 請求 (使用完整的對話歷史，並給予工具)
+                    var request = new GenerateContentRequest
+                    {
+                        SystemInstruction = session.Role,
+                        Contents = session.History,
+                        Tools = _expertToolDeclarations.Count > 0 ? _expertToolDeclarations : null
+                    };
 
-                // 解析回應
-                var data = _serializer.Deserialize<Dictionary<string, object>>(responseJson);
-                var candidates = data["candidates"] as System.Collections.ArrayList;
+                    string responseJson = await _client.GenerateContentAsync(request);
 
-                if (candidates != null && candidates.Count > 0)
-                {
+                    // 解析回應
+                    var data = _serializer.Deserialize<Dictionary<string, object>>(responseJson);
+                    var candidates = data["candidates"] as System.Collections.ArrayList;
+
+                    if (candidates == null || candidates.Count == 0) break;
+
                     var candidate = candidates[0] as Dictionary<string, object>;
                     var modelContent = candidate["content"] as Dictionary<string, object>;
                     var parts = modelContent["parts"] as System.Collections.ArrayList;
@@ -177,47 +204,101 @@ namespace Antigravity02.Agents
 
                     if (parts != null)
                     {
-                        // 收集所有文字回應
+                        bool hasFunctionCall = false;
+                        var toolResponseParts = new List<object>();
                         var textParts = new System.Text.StringBuilder();
+
                         foreach (Dictionary<string, object> part in parts)
                         {
                             if (part.ContainsKey("text"))
                             {
-                                textParts.AppendLine(part["text"].ToString());
+                                string partText = part["text"].ToString();
+                                textParts.AppendLine(partText);
+                                // --- UI: 即時顯示文字思考/片段 ---
+                                if (!string.IsNullOrWhiteSpace(partText))
+                                {
+                                    ui.ReportInfo($"[Expert: {expertName}] {partText}");
+                                }
+                            }
+
+                            if (part.ContainsKey("functionCall"))
+                            {
+                                hasFunctionCall = true;
+                                var call = part["functionCall"] as Dictionary<string, object>;
+                                string funcName = call["name"].ToString();
+                                var argsDict = (call["args"] as Dictionary<string, object>) ?? new Dictionary<string, object>();
+
+                                ui.ReportInfo($"[Expert: {expertName}] 呼叫工具 {funcName}...");
+
+                                // 執行工具呼叫
+                                string result = await _fileModule.TryHandleToolCallAsync(funcName, argsDict, ui);
+                                if (result == null) result = await _httpModule.TryHandleToolCallAsync(funcName, argsDict, ui);
+                                if (result == null) result = "Error: Unknown tool.";
+
+                                // 若遇到圖片，為避免封裝複雜，僅回應文字告知已讀取（因為專家僅支援純文字/工具循環，若需完整圖片支持還需額外處理 user part）
+                                if (result.StartsWith("[IMAGE_BASE64:"))
+                                {
+                                    int newlineIdx = result.IndexOf('\n');
+                                    string desc = newlineIdx >= 0 ? result.Substring(newlineIdx + 1) : "圖片已讀取";
+                                    result = $"[系統提示：專家模式暫不支援直接檢視圖片內容] {desc}";
+                                }
+
+                                toolResponseParts.Add(new
+                                {
+                                    functionResponse = new
+                                    {
+                                        name = funcName,
+                                        response = new { content = result }
+                                    }
+                                });
+                                ui.ReportInfo($"[Expert: {expertName}] 工具返回結果長度: {result.Length}");
                             }
                         }
 
-                        if (textParts.Length > 0)
+                        if (hasFunctionCall)
                         {
-                            string responseText = textParts.ToString().TrimEnd();
-                            int turnCount = session.History.Count / 2;
-
-                            // --- UI: 顯示專家回應 ---
-                            ui.ReportInfo($"\n[Expert: {expertName}] 回應 (第 {turnCount} 輪)：");
-                            ui.ReportInfo(responseText);
-
-                            string sessionInfo = isNewSession
-                                ? $" (新建專家 Session，角色: {Truncate(session.Role, 50)})"
-                                : $" (第 {turnCount} 輪對話)";
-
-                            return $"[專家 {expertName} 回應]{sessionInfo}：\n{responseText}";
+                            // 加入 function 回應，繼續下一輪
+                            session.History.Add(new { role = "function", parts = toolResponseParts });
+                        }
+                        else
+                        {
+                            // 沒有呼叫工具，為最終文字回應
+                            if (textParts.Length > 0)
+                            {
+                                finalResponseText = textParts.ToString().TrimEnd();
+                            }
+                            break;
                         }
                     }
+                    else
+                    {
+                        break;
+                    }
+                } // end while
+
+                if (finalResponseText != null)
+                {
+                    int turnCount = session.History.Count / 2;
+                    string sessionInfo = isNewSession
+                        ? $" (新建專家 Session，角色: {Truncate(session.Role, 50)})"
+                        : $" (第 {turnCount} 輪對話)";
+
+                    return $"[專家 {expertName} 回應]{sessionInfo}：\n{finalResponseText}";
                 }
 
-                // 回應失敗時，移除剛加入的 user 訊息
-                if (session.History.Count > 0)
+                // 回應失敗時，回滾到快照點（清除本次所有殘留記錄）
+                if (session.History.Count > historySnapshot)
                 {
-                    session.History.RemoveAt(session.History.Count - 1);
+                    session.History.RemoveRange(historySnapshot, session.History.Count - historySnapshot);
                 }
-                return $"[System]: 專家 {expertName} 沒有回應。";
+                return $"[System]: 專家 {expertName} 沒有回應或超出反覆迭代次數。";
             }
             catch (Exception ex)
             {
-                // 異常時回滾：移除已加入的 user 訊息，避免殘留
-                if (historyAdded && session != null && session.History.Count > 0)
+                // 異常時回滾：回到快照點，清除迴圈中所有殘留記錄
+                if (session != null && session.History.Count > historySnapshot)
                 {
-                    session.History.RemoveAt(session.History.Count - 1);
+                    session.History.RemoveRange(historySnapshot, session.History.Count - historySnapshot);
                 }
                 UsageLogger.LogError($"ConsultExpert({expertName}) Error: {ex.Message}");
                 return $"[System Error] 諮詢專家 {expertName} 時發生錯誤: {ex.Message}";
