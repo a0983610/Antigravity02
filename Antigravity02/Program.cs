@@ -32,102 +32,102 @@ namespace Antigravity02
 
             if (string.IsNullOrEmpty(apiKey))
             {
-                Console.WriteLine("\n[Error] API Key is required to start the AI Agent.");
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("\n[Warning] API Key is empty. Application will run in Mock API Mode.");
+                Console.ResetColor();
+            }
+            else if (noModelConfigured)
+            {
+                // 不顯示在介面，而是默默更新 .env 檔案
+                await UpdateEnvWithModelListAsync(apiKey);
+            }
+
+            // 無論有沒有 API Key 都會進入執行範圍，遇到需要發 API 時可由底層讀取 MockData
+            var agent = new UniversalAgent(
+                apiKey,
+                smartModel,
+                fastModel,
+                Antigravity02.Config.AgentConfig.GetSystemInstruction()
+            );
+
+            // 顯示目前使用的模型
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            if (smartModel == fastModel)
+            {
+                Console.WriteLine($"[Config] Model: {smartModel}");
             }
             else
             {
-                if (noModelConfigured)
-                {
-                    // 不顯示在介面，而是默默更新 .env 檔案
-                    await UpdateEnvWithModelListAsync(apiKey);
-                }
+                Console.WriteLine($"[Config] Smart Model: {smartModel}");
+                Console.WriteLine($"[Config] Fast Model : {fastModel}");
+            }
+            Console.ResetColor();
 
-                var agent = new UniversalAgent(
-                    apiKey, 
-                    smartModel, 
-                    fastModel, 
-                    Antigravity02.Config.AgentConfig.GetSystemInstruction()
-                );
-                
-                // 顯示目前使用的模型
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                if (smartModel == fastModel)
+            var ui = new ConsoleUI();
+
+            // --- 處理啟動參數 ---
+            if (args.Length > 0)
+            {
+                string initialInput = string.Join(" ", args);
+                Console.ForegroundColor = ConsoleColor.Blue;
+                Console.WriteLine($"\n[Startup Command] Detected arguments: {initialInput}");
+                Console.ResetColor();
+
+                bool isCommand = CommandManager.TryHandleCommand(initialInput, agent, out bool startShouldExit);
+                if (isCommand)
                 {
-                    Console.WriteLine($"[Config] Model: {smartModel}");
+                    if (startShouldExit) return; // 若指令為 /exit，直接結束程式
                 }
                 else
                 {
-                    Console.WriteLine($"[Config] Smart Model: {smartModel}");
-                    Console.WriteLine($"[Config] Fast Model : {fastModel}");
-                }
-                Console.ResetColor();
-
-                var ui = new ConsoleUI();
-
-                // --- 處理啟動參數 ---
-                if (args.Length > 0)
-                {
-                    string initialInput = string.Join(" ", args);
-                    Console.ForegroundColor = ConsoleColor.Blue;
-                    Console.WriteLine($"\n[Startup Command] Detected arguments: {initialInput}");
-                    Console.ResetColor();
-
-                    bool isCommand = CommandManager.TryHandleCommand(initialInput, agent, out bool startShouldExit);
-                    if (isCommand)
-                    {
-                        if (startShouldExit) return; // 若指令為 /exit，直接結束程式
-                    }
-                    else
-                    {
-                        // 若非指令，則視為 Prompt 直接執行
-                        try
-                        {
-                            await agent.ExecuteAsync(initialInput, ui);
-                        }
-                        catch (Exception ex)
-                        {
-                            UsageLogger.LogError($"Startup Args Error: {ex.Message}");
-                            ui.ReportError(ex.Message);
-                        }
-                    }
-                }
-                // --------------------
-
-                while (true)
-                {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.Write("\nUser: ");
-                    Console.ResetColor();
-                    
-                    string input = Console.ReadLine();
-                    if (string.IsNullOrEmpty(input)) continue;
-
-                    // --- 指令處理 ---
-                    if (CommandManager.TryHandleCommand(input, agent, out bool shouldExit))
-                    {
-                        if (shouldExit) break;
-                        continue;
-                    }
-                    // -----------------------
-
+                    // 若非指令，則視為 Prompt 直接執行
                     try
                     {
-                        await agent.ExecuteAsync(input, ui);
+                        await agent.ExecuteAsync(initialInput, ui);
                     }
                     catch (Exception ex)
                     {
-                        UsageLogger.LogError($"System Error: {ex.Message}");
+                        UsageLogger.LogError($"Startup Args Error: {ex.Message}");
                         ui.ReportError(ex.Message);
-                        
-                        // 系統級錯誤也儲存備份
-                        if (agent.SaveChatHistory("system_error_backup.json"))
-                        {
-                            ui.ReportError("系統發生非預期錯誤，對話紀錄已備份至 system_error_backup.json");
-                        }
-                        else
-                        {
-                            ui.ReportError("系統發生非預期錯誤，且無法備份對話紀錄。");
-                        }
+                    }
+                }
+            }
+            // --------------------
+
+            while (true)
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.Write("\nUser: ");
+                Console.ResetColor();
+
+                string input = Console.ReadLine();
+                if (string.IsNullOrEmpty(input)) continue;
+
+                // --- 指令處理 ---
+                if (CommandManager.TryHandleCommand(input, agent, out bool shouldExit))
+                {
+                    if (shouldExit) break;
+                    continue;
+                }
+                // -----------------------
+
+                try
+                {
+                    await agent.ExecuteAsync(input, ui);
+                }
+                catch (Exception ex)
+                {
+                    UsageLogger.LogError($"System Error: {ex.Message}");
+                    ui.ReportError(ex.Message);
+
+                    // 系統級錯誤也儲存備份
+                    if (agent.SaveChatHistory("system_error_backup.json"))
+                    {
+                        ui.ReportError("系統發生非預期錯誤，對話紀錄已備份至 system_error_backup.json");
+                    }
+                    else
+                    {
+                        ui.ReportError("系統發生非預期錯誤，且無法備份對話紀錄。");
                     }
                 }
             }
@@ -193,7 +193,7 @@ namespace Antigravity02
             }
         }
 
-        static string GetApiKey() => GetConfig("GEMINI_API_KEY") ?? PromptForApiKey();
+        static string GetApiKey() => GetConfig("GEMINI_API_KEY");
         
         static string GetConfig(string keyName)
         {
@@ -250,15 +250,5 @@ namespace Antigravity02
             }
         }
 
-        static string PromptForApiKey()
-        {
-            Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.WriteLine("\n[API Key Not Found]");
-            Console.WriteLine("Please set environment variable 'GEMINI_API_KEY' or create '.env' file.");
-            Console.Write("Or enter API Key now: ");
-            Console.ResetColor();
-
-            return Console.ReadLine()?.Trim();
-        }
     }
 }

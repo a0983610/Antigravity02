@@ -21,6 +21,7 @@ namespace Antigravity02.AIClient
         private readonly string _model;
         public string ModelName => _model;
         private static readonly HttpClient _httpClient = new HttpClient();
+        private static bool _mockMessageShown = false;
 
         public GeminiClient(string apiKey, string model = "gemini-2.5-flash")
         {
@@ -30,6 +31,73 @@ namespace Antigravity02.AIClient
 
         public async Task<string> GenerateContentAsync(GenerateContentRequest request)
         {
+            if (string.IsNullOrWhiteSpace(_apiKey))
+            {
+                // 決定檔案建立的路徑 (優先找執行檔所在、若無則找專案根目錄)
+                string basePath = AppDomain.CurrentDomain.BaseDirectory;
+                string mockFileSubPath = System.IO.Path.Combine("MockData", "gemini_mock_response.json");
+                
+                string mockFilePath = System.IO.Path.Combine(basePath, mockFileSubPath);
+
+                // 如果執行目錄沒有，我們檢查專案原始目錄 (GetCurrentDirectory 通常是專案根目錄 C:\...\Antigravity02)
+                string devPath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), mockFileSubPath);
+                
+                if (System.IO.File.Exists(mockFilePath))
+                {
+                    // 執行檔旁有就讀取
+                }
+                else if (System.IO.File.Exists(devPath))
+                {
+                    // 開發目錄有就讀取
+                    mockFilePath = devPath;
+                }
+                else
+                {
+                    // 如果兩邊都沒有，優先建立在開發目錄 (GetCurrentDirectory)，方便使用者編輯
+                    mockFilePath = devPath;
+                }
+
+                if (System.IO.File.Exists(mockFilePath))
+                {
+                    if (!_mockMessageShown)
+                    {
+                        Console.WriteLine($"\n[GeminiClient] 尚未設定 API KEY，讀取模擬回應資料 ({mockFilePath})...");
+                        _mockMessageShown = true;
+                    }
+                    return System.IO.File.ReadAllText(mockFilePath);
+                }
+                else
+                {
+                    // 自動建立空白檔案並填入預設結構
+                    Console.WriteLine($"\n[System] 找不到模擬回應檔案，正在自動建立空白檔案: {mockFilePath}");
+                    
+                    var directory = System.IO.Path.GetDirectoryName(mockFilePath);
+                    if (!System.IO.Directory.Exists(directory))
+                    {
+                        System.IO.Directory.CreateDirectory(directory);
+                    }
+
+                    string defaultMockContent = @"{
+  ""candidates"": [
+    {
+      ""content"": {
+        ""parts"": [
+          {
+            ""text"": """"
+          }
+        ],
+        ""role"": ""model""
+      },
+      ""finishReason"": ""STOP""
+    }
+  ]
+}";
+                    System.IO.File.WriteAllText(mockFilePath, defaultMockContent, Encoding.UTF8);
+                    
+                    throw new Exception($"尚未設定 API KEY，且找不到模擬回應檔案。\n系統已自動於路徑建立空白檔案：{mockFilePath}\n請在該檔案中的 'text' 欄位填入您想測試的回應內容後再試一次。");
+                }
+            }
+
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
 
             object systemInstObj = null;
