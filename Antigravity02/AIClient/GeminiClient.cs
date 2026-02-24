@@ -22,6 +22,7 @@ namespace Antigravity02.AIClient
         public string ModelName => _model;
         private static readonly HttpClient _httpClient = new HttpClient();
         private static bool _mockMessageShown = false;
+        private static int _mockCounter = 1;
 
         public GeminiClient(string apiKey, string model = "gemini-2.5-flash")
         {
@@ -33,29 +34,10 @@ namespace Antigravity02.AIClient
         {
             if (string.IsNullOrWhiteSpace(_apiKey))
             {
-                // 決定檔案建立的路徑 (優先找執行檔所在、若無則找專案根目錄)
+                // 決定檔案建立的路徑 (固定在執行檔所在資料夾)
                 string basePath = AppDomain.CurrentDomain.BaseDirectory;
-                string mockFileSubPath = System.IO.Path.Combine("MockData", "gemini_mock_response.json");
-                
-                string mockFilePath = System.IO.Path.Combine(basePath, mockFileSubPath);
-
-                // 如果執行目錄沒有，我們檢查專案原始目錄 (GetCurrentDirectory 通常是專案根目錄 C:\...\Antigravity02)
-                string devPath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), mockFileSubPath);
-                
-                if (System.IO.File.Exists(mockFilePath))
-                {
-                    // 執行檔旁有就讀取
-                }
-                else if (System.IO.File.Exists(devPath))
-                {
-                    // 開發目錄有就讀取
-                    mockFilePath = devPath;
-                }
-                else
-                {
-                    // 如果兩邊都沒有，優先建立在開發目錄 (GetCurrentDirectory)，方便使用者編輯
-                    mockFilePath = devPath;
-                }
+                string mockFileName = $"gemini_mock_response_{_mockCounter:D4}.json";
+                string mockFilePath = System.IO.Path.Combine(basePath, "MockData", mockFileName);
 
                 if (System.IO.File.Exists(mockFilePath))
                 {
@@ -64,7 +46,14 @@ namespace Antigravity02.AIClient
                         Console.WriteLine($"\n[GeminiClient] 尚未設定 API KEY，讀取模擬回應資料 ({mockFilePath})...");
                         _mockMessageShown = true;
                     }
-                    return System.IO.File.ReadAllText(mockFilePath);
+                    else
+                    {
+                        Console.WriteLine($"\n[GeminiClient] 讀取模擬回應資料 ({mockFilePath})...");
+                    }
+
+                    string mockFileContent = System.IO.File.ReadAllText(mockFilePath);
+                    _mockCounter++;
+                    return mockFileContent;
                 }
                 else
                 {
@@ -83,7 +72,7 @@ namespace Antigravity02.AIClient
       ""content"": {
         ""parts"": [
           {
-            ""text"": """"
+            ""text"": ""請在這裡填寫你想測試的回應內容。\n支援多行與 Markdown 格式。\n例如：\n\n這是一個測試回應。""
           }
         ],
         ""role"": ""model""
