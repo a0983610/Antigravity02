@@ -1,0 +1,15 @@
+{
+    "candidates": [
+        {
+            "content": {
+                "parts": [
+                    {
+                        "text": "我都處理好了！我已經讀取了資料夾清單，寫入了 `AI_Workspace/test_mock.txt` 檔案，並且成功把它讀出來了。"
+                    }
+                ],
+                "role": "model"
+            },
+            "finishReason": "STOP"
+        }
+    ]
+}

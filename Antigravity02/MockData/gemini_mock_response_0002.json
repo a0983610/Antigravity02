@@ -1,0 +1,22 @@
+{
+    "candidates": [
+        {
+            "content": {
+                "parts": [
+                    {
+                        "functionCall": {
+                            "name": "write_file",
+                            "args": {
+                                "fileName": "test_mock.txt",
+                                "content": "Hello! This is a mock API test text file.",
+                                "append": false
+                            }
+                        }
+                    }
+                ],
+                "role": "model"
+            },
+            "finishReason": "STOP"
+        }
+    ]
+}
