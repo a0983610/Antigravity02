@@ -20,14 +20,13 @@ namespace Antigravity02.AIClient
         private readonly string _apiKey;
         private readonly string _model;
         public string ModelName => _model;
-        private readonly HttpClient _httpClient;
+        private static readonly HttpClient _httpClient = new HttpClient();
         private readonly JavaScriptSerializer _serializer;
 
         public GeminiClient(string apiKey, string model = "gemini-2.5-flash")
         {
             _apiKey = apiKey;
             _model = model;
-            _httpClient = new HttpClient();
             _serializer = new JavaScriptSerializer();
         }
 

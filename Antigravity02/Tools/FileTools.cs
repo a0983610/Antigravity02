@@ -310,10 +310,14 @@ namespace Antigravity02.Tools
                         XmlNamespaceManager nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
                         nsmgr.AddNamespace("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
 
-                        XmlNodeList nodes = xmlDoc.SelectNodes("//w:t", nsmgr);
-                        foreach (XmlNode node in nodes)
+                        // 依據段落 <w:p> 遍歷，並在段落間加入換行符號
+                        XmlNodeList paragraphs = xmlDoc.SelectNodes("//w:p", nsmgr);
+                        if (paragraphs != null)
                         {
-                            sb.Append(node.InnerText);
+                            foreach (XmlNode pNode in paragraphs)
+                            {
+                                sb.AppendLine(pNode.InnerText);
+                            }
                         }
                     }
                 }
