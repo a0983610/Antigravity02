@@ -34,8 +34,8 @@ namespace Antigravity02.AIClient
         {
             if (string.IsNullOrWhiteSpace(_apiKey))
             {
-                // 決定檔案建立的路徑 (固定在執行檔所在資料夾)
-                string basePath = AppDomain.CurrentDomain.BaseDirectory;
+                // 決定檔案建立的路徑 (固定在程式碼執行目錄，即專案所在位置)
+                string basePath = Environment.CurrentDirectory;
                 string mockFileName = $"gemini_mock_response_{_mockCounter:D4}.json";
                 string mockFilePath = System.IO.Path.Combine(basePath, "MockData", mockFileName);
 
