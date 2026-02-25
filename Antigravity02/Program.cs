@@ -11,7 +11,36 @@ namespace Antigravity02
 {
     internal class Program
     {
+        private static readonly string EnvPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".env");
+
         static async Task Main(string[] args)
+        {
+            var (apiKey, smartModel, fastModel) = await InitializeConfigurationAsync();
+
+            PrintStartupBanner(apiKey);
+
+            // 無論有沒有 API Key 都會進入執行範圍，遇到需要發 API 時可由底層讀取 MockData
+            var agent = new UniversalAgent(
+                apiKey,
+                smartModel,
+                fastModel,
+                Antigravity02.Config.AgentConfig.GetSystemInstruction()
+            );
+
+            PrintModelConfig(smartModel, fastModel);
+
+            var ui = new ConsoleUI();
+
+            bool shouldExitFromArgs = await ProcessStartupArgsAsync(args, agent, ui);
+            if (shouldExitFromArgs) return;
+
+            await RunInteractiveLoopAsync(agent, ui);
+
+            Console.WriteLine("\nProgram finished.");
+            if (!Console.IsInputRedirected) { Console.ReadKey(); }
+        }
+
+        static async Task<(string apiKey, string smartModel, string fastModel)> InitializeConfigurationAsync()
         {
             // 確保環境變量檔案存在
             EnsureEnvFileExists();
@@ -28,6 +57,17 @@ namespace Antigravity02
             string fastModel = fastModelRaw ?? "gemini-2.5-flash";
             // ----------------
 
+            if (noModelConfigured && !string.IsNullOrEmpty(apiKey))
+            {
+                // 不顯示在介面，而是默默更新 .env 檔案
+                await UpdateEnvWithModelListAsync(apiKey);
+            }
+
+            return (apiKey, smartModel, fastModel);
+        }
+
+        static void PrintStartupBanner(string apiKey)
+        {
             Console.WriteLine("=== AI Automation Assistant ===");
 
             if (string.IsNullOrEmpty(apiKey))
@@ -36,20 +76,10 @@ namespace Antigravity02
                 Console.WriteLine("\n[Warning] API Key is empty. Application will run in Mock API Mode.");
                 Console.ResetColor();
             }
-            else if (noModelConfigured)
-            {
-                // 不顯示在介面，而是默默更新 .env 檔案
-                await UpdateEnvWithModelListAsync(apiKey);
-            }
+        }
 
-            // 無論有沒有 API Key 都會進入執行範圍，遇到需要發 API 時可由底層讀取 MockData
-            var agent = new UniversalAgent(
-                apiKey,
-                smartModel,
-                fastModel,
-                Antigravity02.Config.AgentConfig.GetSystemInstruction()
-            );
-
+        static void PrintModelConfig(string smartModel, string fastModel)
+        {
             // 顯示目前使用的模型
             Console.ForegroundColor = ConsoleColor.Cyan;
             if (smartModel == fastModel)
@@ -62,38 +92,10 @@ namespace Antigravity02
                 Console.WriteLine($"[Config] Fast Model : {fastModel}");
             }
             Console.ResetColor();
+        }
 
-            var ui = new ConsoleUI();
-
-            // --- 處理啟動參數 ---
-            if (args.Length > 0)
-            {
-                string initialInput = string.Join(" ", args);
-                Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine($"\n[Startup Command] Detected arguments: {initialInput}");
-                Console.ResetColor();
-
-                bool isCommand = CommandManager.TryHandleCommand(initialInput, agent, out bool startShouldExit);
-                if (isCommand)
-                {
-                    if (startShouldExit) return; // 若指令為 /exit，直接結束程式
-                }
-                else
-                {
-                    // 若非指令，則視為 Prompt 直接執行
-                    try
-                    {
-                        await agent.ExecuteAsync(initialInput, ui);
-                    }
-                    catch (Exception ex)
-                    {
-                        UsageLogger.LogError($"Startup Args Error: {ex.Message}");
-                        ui.ReportError(ex.Message);
-                    }
-                }
-            }
-            // --------------------
-
+        static async Task RunInteractiveLoopAsync(UniversalAgent agent, ConsoleUI ui)
+        {
             while (true)
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
@@ -132,21 +134,55 @@ namespace Antigravity02
                     }
                 }
             }
+        }
 
-            Console.WriteLine("\nProgram finished.");
-            if (!Console.IsInputRedirected) { Console.ReadKey(); }
+        static async Task<bool> ProcessStartupArgsAsync(string[] args, UniversalAgent agent, ConsoleUI ui)
+        {
+            if (args.Length == 0) return false;
+
+            string initialInput = string.Join(" ", args);
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.WriteLine($"\n[Startup Command] Detected arguments: {initialInput}");
+            Console.ResetColor();
+
+            bool isCommand = CommandManager.TryHandleCommand(initialInput, agent, out bool startShouldExit);
+            if (isCommand)
+            {
+                if (startShouldExit) return true; // 若指令為 /exit，直接結束程式
+            }
+            else
+            {
+                // 若非指令，則視為 Prompt 直接執行
+                try
+                {
+                    await agent.ExecuteAsync(initialInput, ui);
+                }
+                catch (Exception ex)
+                {
+                    UsageLogger.LogError($"Startup Args Error: {ex.Message}");
+                    ui.ReportError(ex.Message);
+
+                    // 啟動參數發生錯誤時也進行歷史紀錄備份
+                    if (agent.SaveChatHistory("system_error_backup.json"))
+                    {
+                        ui.ReportError("系統發生非預期錯誤，對話紀錄已備份至 system_error_backup.json");
+                    }
+                    else
+                    {
+                        ui.ReportError("系統發生非預期錯誤，且無法備份對話紀錄。");
+                    }
+                }
+            }
+            return false;
         }
 
         static async Task UpdateEnvWithModelListAsync(string apiKey)
         {
-            const string envFileName = ".env";
-            string envPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, envFileName);
-
-            if (!File.Exists(envPath)) return;
+            if (!File.Exists(EnvPath)) return;
 
             try
             {
-                string envContent = File.ReadAllText(envPath);
+                string envContent = File.ReadAllText(EnvPath);
                 // 如果已經有模型列表註解，就不重複查詢寫入
                 if (envContent.Contains("# --- 自動查詢可用模型列表 ---")) return;
 
@@ -161,15 +197,18 @@ namespace Antigravity02
                 if (data.ContainsKey("models"))
                 {
                     var models = data["models"] as System.Collections.ArrayList;
-                    foreach (Dictionary<string, object> model in models)
+                    if (models != null)
                     {
-                        string name = model["name"].ToString().Replace("models/", "");
-                        string displayName = model["displayName"].ToString();
-                        
-                        var methods = model["supportedGenerationMethods"] as System.Collections.ArrayList;
-                        if (methods != null && methods.Contains("generateContent"))
+                        foreach (Dictionary<string, object> model in models)
                         {
-                            modelDocs.AppendLine($"# {name,-25} : {displayName}");
+                            string name = model["name"].ToString().Replace("models/", "");
+                            string displayName = model["displayName"].ToString();
+                            
+                            var methods = model["supportedGenerationMethods"] as System.Collections.ArrayList;
+                            if (methods != null && methods.Contains("generateContent"))
+                            {
+                                modelDocs.AppendLine($"# {name,-25} : {displayName}");
+                            }
                         }
                     }
                 }
@@ -185,8 +224,8 @@ namespace Antigravity02
                     envContent += modelDocs.ToString();
                 }
 
-                File.WriteAllText(envPath, envContent);
-                Console.WriteLine($"[System] 已自動查詢可用模型列表，並寫入 {envFileName} 供參考。");
+                File.WriteAllText(EnvPath, envContent);
+                Console.WriteLine($"[System] 已自動查詢可用模型列表，並寫入 .env 供參考。");
             }
             catch
             {
@@ -198,17 +237,14 @@ namespace Antigravity02
         
         static string GetConfig(string keyName)
         {
-            const string envFileName = ".env";
-
             // 1. 優先從系統環境變量讀取
             string value = Environment.GetEnvironmentVariable(keyName);
             if (!string.IsNullOrEmpty(value)) return value;
 
             // 2. 嘗試從本地 .env 檔案讀取
-            string envPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, envFileName);
-            if (File.Exists(envPath))
+            if (File.Exists(EnvPath))
             {
-                var lines = File.ReadAllLines(envPath);
+                var lines = File.ReadAllLines(EnvPath);
                 foreach (var line in lines)
                 {
                     var trimmed = line.Trim();
@@ -226,10 +262,7 @@ namespace Antigravity02
 
         static void EnsureEnvFileExists()
         {
-            const string envFileName = ".env";
-            string envPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, envFileName);
-
-            if (!File.Exists(envPath))
+            if (!File.Exists(EnvPath))
             {
                 string content = "# Gemini API Key (必填)\n" +
                                  "GEMINI_API_KEY=\n\n" +
@@ -241,7 +274,7 @@ namespace Antigravity02
                 
                 try
                 {
-                    File.WriteAllText(envPath, content);
+                    File.WriteAllText(EnvPath, content);
                     Console.WriteLine("[System] 已自動創建 .env 配置文件，請填入 API Key 後重新啟動。");
                 }
                 catch (Exception ex)
