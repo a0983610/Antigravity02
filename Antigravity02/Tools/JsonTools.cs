@@ -32,6 +32,16 @@ namespace Antigravity02.Tools
         {
             if (string.IsNullOrEmpty(json)) return default;
             
+            if (typeof(T) == typeof(Newtonsoft.Json.Linq.JObject))
+            {
+                return (T)(object)Newtonsoft.Json.Linq.JObject.Parse(json);
+            }
+
+            if (typeof(T) == typeof(Newtonsoft.Json.Linq.JToken))
+            {
+                return (T)(object)Newtonsoft.Json.Linq.JToken.Parse(json);
+            }
+
             // 如果要解析為 Dictionary<string, object>，手動將 JToken 轉為舊式的 Dictionary 與 ArrayList 以相容原本代碼
             if (typeof(T) == typeof(System.Collections.Generic.Dictionary<string, object>))
             {
