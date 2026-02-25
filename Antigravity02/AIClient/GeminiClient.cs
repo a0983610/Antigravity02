@@ -176,6 +176,27 @@ namespace Antigravity02.AIClient
             };
         }
 
+        public System.Collections.ArrayList ExtractResponseParts(Dictionary<string, object> data, out Dictionary<string, object> modelContent)
+        {
+            modelContent = null;
+            var candidates = data["candidates"] as System.Collections.ArrayList;
+            if (candidates == null || candidates.Count == 0) return null;
+
+            modelContent = (candidates[0] as Dictionary<string, object>)["content"] as Dictionary<string, object>;
+            return modelContent["parts"] as System.Collections.ArrayList;
+        }
+
+        public string ExtractTextFromResponseData(Dictionary<string, object> data)
+        {
+            var parts = ExtractResponseParts(data, out _);
+            if (parts != null && parts.Count > 0)
+            {
+                var dictPart = parts[0] as Dictionary<string, object>;
+                return dictPart?["text"]?.ToString();
+            }
+            return null;
+        }
+
         /// <summary>
         /// 輔助方法：定義多個工具
         /// </summary>

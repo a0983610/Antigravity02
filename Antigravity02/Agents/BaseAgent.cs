@@ -73,14 +73,7 @@ namespace Antigravity02.Agents
         public async Task ExecuteAsync(string userPrompt, IAgentUI ui)
         {
             _modelSwitchHappenedInThisTurn = false;
-            
-            // 根據開關決定是否加上時間戳記
-            string finalPrompt = EnableTimestampHeader ? 
-                $"[Current Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}]\n{userPrompt}" : 
-                userPrompt;
-
-            // 將新的使用者訊息加入歷史紀錄
-            ChatHistory.Add(new { role = "user", parts = new[] { new { text = finalPrompt } } });
+            AppendUserPromptToHistory(userPrompt);
 
             bool continueLoop = true;
             int currentIteration = 0;
@@ -97,53 +90,19 @@ namespace Antigravity02.Agents
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
-                    // 複製一份 ChatHistory 給這次 Request 使用
-                    var requestContents = new List<object>(ChatHistory);
-
-                    // 在送往 AI 前，固定附加上系統資訊 (如 read_skills)，但不存入 ChatHistory
-                    try
-                    {
-                        string additionalInfo = BuildSystemFixedInfo();
-                        if (!string.IsNullOrWhiteSpace(additionalInfo))
-                        {
-                            AppendFixedInfoToLastUserMessage(requestContents, additionalInfo);
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        // 忽略錯誤，避免阻斷主要執行流程
-                    }
-
-                    var request = new GenerateContentRequest
-                    {
-                        Contents = requestContents,
-                        Tools = ToolDeclarations,
-                        SystemInstruction = SystemInstruction
-                    };
-
+                    var request = CreateRequest();
                     string rawJson = await Client.GenerateContentAsync(request);
                     sw.Stop();
 
                     var data = JsonTools.Deserialize<Dictionary<string, object>>(rawJson);
 
-                    // 解析並紀錄 Token 使用量
-                    var (promptTokens, candidateTokens, totalTokens) = ExtractTokenUsage(data);
-                    UsageLogger.LogApiUsage(currentModelName, sw.ElapsedMilliseconds, promptTokens, candidateTokens, totalTokens);
+                    await HandleTokenUsageAsync(data, currentModelName, sw.ElapsedMilliseconds, ui);
 
-                    if (totalTokens >= TokenThresholdForCompression)
-                    {
-                        await CompressHistoryAsync(ui);
-                    }
-
-                    var candidates = data["candidates"] as System.Collections.ArrayList;
-                    if (candidates == null || candidates.Count == 0) break;
-
-                    var modelContent = (candidates[0] as Dictionary<string, object>)["content"] as Dictionary<string, object>;
-                    var parts = modelContent["parts"] as System.Collections.ArrayList;
+                    var parts = Client.ExtractResponseParts(data, out var modelContent);
+                    if (parts == null) break;
 
                     ChatHistory.Add(modelContent);
 
-                    // 處理模型回傳的 parts，包含文字回應與工具呼叫
                     var (hasFunctionCall, toolResponseParts) = await ProcessModelPartsAsync(parts, ui, currentModelName);
 
                     if (hasFunctionCall)
@@ -163,16 +122,56 @@ namespace Antigravity02.Agents
 
                 if (continueLoop && currentIteration >= maxIterations)
                 {
-                    bool shouldContinue = await CheckMaxIterationsAndPromptAsync(maxIterations, ui);
-                    if (shouldContinue)
+                    continueLoop = await CheckMaxIterationsAndPromptAsync(maxIterations, ui);
+                    if (continueLoop)
                     {
                         currentIteration = 0;
                     }
-                    else
-                    {
-                        continueLoop = false;
-                    }
                 }
+            }
+        }
+
+        private void AppendUserPromptToHistory(string userPrompt)
+        {
+            string finalPrompt = EnableTimestampHeader ? 
+                $"[Current Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}]\n{userPrompt}" : 
+                userPrompt;
+            ChatHistory.Add(new { role = "user", parts = new[] { new { text = finalPrompt } } });
+        }
+
+        private GenerateContentRequest CreateRequest()
+        {
+            var requestContents = new List<object>(ChatHistory);
+
+            try
+            {
+                string additionalInfo = BuildSystemFixedInfo();
+                if (!string.IsNullOrWhiteSpace(additionalInfo))
+                {
+                    AppendFixedInfoToLastUserMessage(requestContents, additionalInfo);
+                }
+            }
+            catch (Exception)
+            {
+                // 忽略錯誤，避免阻斷主要執行流程
+            }
+
+            return new GenerateContentRequest
+            {
+                Contents = requestContents,
+                Tools = ToolDeclarations,
+                SystemInstruction = SystemInstruction
+            };
+        }
+
+        private async Task HandleTokenUsageAsync(Dictionary<string, object> data, string modelName, long elapsedMs, IAgentUI ui)
+        {
+            var (promptTokens, candidateTokens, totalTokens) = ExtractTokenUsage(data);
+            UsageLogger.LogApiUsage(modelName, elapsedMs, promptTokens, candidateTokens, totalTokens);
+
+            if (totalTokens >= TokenThresholdForCompression)
+            {
+                await CompressHistoryAsync(ui);
             }
         }
 
@@ -339,33 +338,7 @@ namespace Antigravity02.Agents
         {
             if (ChatHistory.Count < 6) return;
 
-            int targetSplitIndex = ChatHistory.Count / 2;
-            int actualSplitIndex = -1;
-
-            for (int i = targetSplitIndex; i < ChatHistory.Count; i++)
-            {
-                string role = "";
-                if (ChatHistory[i] is Dictionary<string, object> dict && dict.ContainsKey("role"))
-                {
-                    role = dict["role"]?.ToString();
-                }
-                else
-                {
-                    string serialized = JsonTools.Serialize(ChatHistory[i]);
-                    var tempDict = JsonTools.Deserialize<Dictionary<string, object>>(serialized);
-                    if (tempDict != null && tempDict.ContainsKey("role"))
-                    {
-                        role = tempDict["role"]?.ToString();
-                    }
-                }
-
-                if (role == "user")
-                {
-                    actualSplitIndex = i;
-                    break;
-                }
-            }
-
+            int actualSplitIndex = FindCompressSplitIndex();
             if (actualSplitIndex <= 0) return;
 
             ui.ReportThinking(0, "Fast Model (正在壓縮與清理對話歷史紀錄...)");
@@ -375,41 +348,67 @@ namespace Antigravity02.Agents
 
             string compressPrompt = "請將以下歷史對話紀錄進行詳細摘要，保留重要的上下文、決策過程、變數設定與關鍵資訊：\n\n" + jsonToCompress;
 
-            var request = new GenerateContentRequest
-            {
-                Contents = new List<object>
-                {
-                    new { role = "user", parts = new[] { new { text = compressPrompt } } }
-                }
-            };
-
             try
             {
-                string rawJson = await FastClient.GenerateContentAsync(request);
-                var data = JsonTools.Deserialize<Dictionary<string, object>>(rawJson);
-                
-                if (data != null && data.ContainsKey("candidates"))
+                string summaryText = await GenerateSummaryAsync(compressPrompt);
+                if (summaryText != null)
                 {
-                    var candidates = data["candidates"] as System.Collections.ArrayList;
-                    if (candidates != null && candidates.Count > 0)
-                    {
-                        var modelContent = (candidates[0] as Dictionary<string, object>)["content"] as Dictionary<string, object>;
-                        var parts = modelContent["parts"] as System.Collections.ArrayList;
-                        string summaryText = (parts[0] as Dictionary<string, object>)["text"]?.ToString() ?? "摘要失敗";
-
-                        ChatHistory.RemoveRange(0, actualSplitIndex);
-                        
-                        ChatHistory.Insert(0, new { role = "user", parts = new[] { new { text = "以下是之前對話的歷史摘要：\n" + summaryText } } });
-                        ChatHistory.Insert(1, new { role = "model", parts = new[] { new { text = "已收到歷史紀錄摘要，我會根據這些資訊上下文繼續回應並執行任務。" } } });
-
-                        ui.ReportToolResult($"歷史紀錄 Token 過高，已自動將前半段 ({actualSplitIndex} 則對話) 壓縮為摘要，釋放 Token 空間。");
-                    }
+                    ApplyHistoryCompression(actualSplitIndex, summaryText, ui);
                 }
             }
             catch (Exception ex)
             {
                 UsageLogger.LogError($"History Compression Error: {ex.Message}");
             }
+        }
+
+        private int FindCompressSplitIndex()
+        {
+            int targetSplitIndex = ChatHistory.Count / 2;
+            for (int i = targetSplitIndex; i < ChatHistory.Count; i++)
+            {
+                string role = ExtractRoleFromHistoryItem(ChatHistory[i]);
+                if (role == "user")
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        private string ExtractRoleFromHistoryItem(object item)
+        {
+            if (item is Dictionary<string, object> dict && dict.ContainsKey("role"))
+            {
+                return dict["role"]?.ToString();
+            }
+            string serialized = JsonTools.Serialize(item);
+            var tempDict = JsonTools.Deserialize<Dictionary<string, object>>(serialized);
+            return tempDict != null && tempDict.ContainsKey("role") ? tempDict["role"]?.ToString() : "";
+        }
+
+        private async Task<string> GenerateSummaryAsync(string prompt)
+        {
+            var request = new GenerateContentRequest
+            {
+                Contents = new List<object>
+                {
+                    new { role = "user", parts = new[] { new { text = prompt } } }
+                }
+            };
+
+            string rawJson = await FastClient.GenerateContentAsync(request);
+            var data = JsonTools.Deserialize<Dictionary<string, object>>(rawJson);
+            
+            return FastClient.ExtractTextFromResponseData(data) ?? "摘要失敗";
+        }
+
+        private void ApplyHistoryCompression(int splitIndex, string summaryText, IAgentUI ui)
+        {
+            ChatHistory.RemoveRange(0, splitIndex);
+            ChatHistory.Insert(0, new { role = "user", parts = new[] { new { text = "以下是之前對話的歷史摘要：\n" + summaryText } } });
+            ChatHistory.Insert(1, new { role = "model", parts = new[] { new { text = "已收到歷史紀錄摘要，我會根據這些資訊上下文繼續回應並執行任務。" } } });
+            ui.ReportToolResult($"歷史紀錄 Token 過高，已自動將前半段 ({splitIndex} 則對話) 壓縮為摘要，釋放 Token 空間。");
         }
 
         /// <summary>
