@@ -1,3 +1,0 @@
-This is a test file for Antigravity FileTools.
-Line 2: Hello World!
-Line 3: Testing Function Calling.
