@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Antigravity02.AIClient;
+using Antigravity02.Tools;
 using Antigravity02.UI;
 
 namespace Antigravity02.Agents
@@ -12,7 +13,7 @@ namespace Antigravity02.Agents
     {
         private readonly List<IAgentModule> _modules = new List<IAgentModule>();
 
-        public UniversalAgent(string apiKey, string smartModel, string fastModel, string systemInstruction = null) : base(apiKey, smartModel, fastModel)
+        public UniversalAgent(IAIClient smartClient, IAIClient fastClient, string systemInstruction = null) : base(smartClient, fastClient)
         {
             // 在此註冊所有模組
             // 只有 Smart 和 Fast 為不同模型時，才啟用摘要功能（避免浪費相同模型的 API 呼叫）
@@ -20,7 +21,7 @@ namespace Antigravity02.Agents
             RegisterModule(new FileModule(hasDifferentFastModel ? FastClient : null));
             RegisterModule(new HttpModule());
             RegisterModule(new AIControlModule(this.SetModelMode, () => this.IsSmartMode));
-            RegisterModule(new MultiAgentModule(apiKey, smartModel));
+            RegisterModule(new MultiAgentModule(smartClient));
             // 未來可以輕鬆加入更多模組，例如：
             // RegisterModule(new WebSearchModule());
             // RegisterModule(new DatabaseModule());

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Antigravity02.Agents;
 using Antigravity02.Tools;
 using Antigravity02.UI;
+using Antigravity02.AIClient;
 
 namespace Antigravity02
 {
@@ -20,10 +21,12 @@ namespace Antigravity02
             PrintStartupBanner(apiKey);
 
             // 無論有沒有 API Key 都會進入執行範圍，遇到需要發 API 時可由底層讀取 MockData
+            var smartClient = new GeminiClient(apiKey, smartModel);
+            var fastClient = new GeminiClient(apiKey, fastModel);
+
             var agent = new UniversalAgent(
-                apiKey,
-                smartModel,
-                fastModel,
+                smartClient,
+                fastClient,
                 Antigravity02.Config.AgentConfig.GetSystemInstruction()
             );
 

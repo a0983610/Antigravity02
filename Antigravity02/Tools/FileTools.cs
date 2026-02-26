@@ -172,7 +172,7 @@ namespace Antigravity02.Tools
                 }
                 else
                 {
-                    return "不支援的檔案格式或禁止存取。";
+                    return "錯誤：不支援的檔案格式或禁止存取。";
                 }
             }
             catch (Exception ex)
@@ -314,7 +314,7 @@ namespace Antigravity02.Tools
                 using (ZipArchive archive = ZipFile.OpenRead(filePath))
                 {
                     var entry = archive.GetEntry("word/document.xml");
-                    if (entry == null) return "無效的 .docx 檔案。";
+                    if (entry == null) return "錯誤：無效的 .docx 檔案。";
 
                     using (Stream stream = entry.Open())
                     {
@@ -341,7 +341,7 @@ namespace Antigravity02.Tools
             catch (Exception ex)
             {
                 UsageLogger.LogError($"FileTools(ReadDocxText) Error: {ex.Message}");
-                return $"讀取 .docx 時發生錯誤：{ex.Message}";
+                return $"錯誤：讀取 .docx 時發生錯誤：{ex.Message}";
             }
         }
 

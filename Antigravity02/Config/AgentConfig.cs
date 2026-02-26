@@ -24,13 +24,13 @@ namespace Antigravity02.Config
         {
             try
             {
-                // Try to read additional instructions from the specific file
-                string agentDirPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AI_Workspace", ".agent");
-                string instructionFilePath = System.IO.Path.Combine(agentDirPath, "SystemInstruction.txt");
+                var fileTools = new Antigravity02.Tools.FileTools();
+                // Read from AI_Workspace/.agent/SystemInstruction.txt
+                string content = fileTools.ReadFile(System.IO.Path.Combine(".agent", "SystemInstruction.txt"));
                 
-                if (System.IO.File.Exists(instructionFilePath))
+                if (!string.IsNullOrWhiteSpace(content) && !content.StartsWith("錯誤："))
                 {
-                    return "\n【附加 System Instruction】\n" + System.IO.File.ReadAllText(instructionFilePath);
+                    return "\n【附加 System Instruction】\n" + content;
                 }
             }
             catch

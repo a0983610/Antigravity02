@@ -34,9 +34,9 @@ namespace Antigravity02.Agents
         /// </summary>
         private readonly Dictionary<string, ExpertSession> _sessions = new Dictionary<string, ExpertSession>(StringComparer.OrdinalIgnoreCase);
 
-        public MultiAgentModule(string apiKey, string modelName)
+        public MultiAgentModule(IAIClient smartClient)
         {
-            _client = new GeminiClient(apiKey, modelName);
+            _client = smartClient;
             
             // 初始化專家可用工具模組
             _fileModule = new FileModule(null); // 專家暫不支援快速模型摘要

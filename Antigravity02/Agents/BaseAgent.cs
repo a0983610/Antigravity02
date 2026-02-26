@@ -59,10 +59,10 @@ namespace Antigravity02.Agents
         // 新增：歷史紀錄壓縮 Token 閾值
         public int TokenThresholdForCompression { get; set; } = 800000;
 
-        protected BaseAgent(string apiKey, string smartModel, string fastModel)
+        protected BaseAgent(IAIClient smartClient, IAIClient fastClient)
         {
-            SmartClient = new GeminiClient(apiKey, smartModel);
-            FastClient = new GeminiClient(apiKey, fastModel);
+            SmartClient = smartClient;
+            FastClient = fastClient;
             ToolDeclarations = new List<object>();
             ChatHistory = new List<object>(); // 新增：初始化對話紀錄
         }
