@@ -21,8 +21,6 @@ namespace Antigravity02.AIClient
         private readonly string _model;
         public string ModelName => _model;
         private static readonly HttpClient _httpClient = new HttpClient();
-        private static bool _mockMessageShown = false;
-        private static int _mockCounter = 1;
 
         public GeminiClient(string apiKey, string model = "gemini-2.5-flash")
         {
@@ -34,57 +32,7 @@ namespace Antigravity02.AIClient
         {
             if (string.IsNullOrWhiteSpace(_apiKey))
             {
-                // 決定檔案建立的路徑 (固定在程式碼執行目錄，即專案所在位置)
-                string basePath = Environment.CurrentDirectory;
-                string mockFileName = $"gemini_mock_response_{_mockCounter:D4}.json";
-                string mockFilePath = System.IO.Path.Combine(basePath, "MockData", mockFileName);
-
-                if (System.IO.File.Exists(mockFilePath))
-                {
-                    if (!_mockMessageShown)
-                    {
-                        Console.WriteLine($"\n[GeminiClient] 尚未設定 API KEY，讀取模擬回應資料 ({mockFilePath})...");
-                        _mockMessageShown = true;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"\n[GeminiClient] 讀取模擬回應資料 ({mockFilePath})...");
-                    }
-
-                    string mockFileContent = System.IO.File.ReadAllText(mockFilePath);
-                    _mockCounter++;
-                    return mockFileContent;
-                }
-                else
-                {
-                    // 自動建立空白檔案並填入預設結構
-                    Console.WriteLine($"\n[System] 找不到模擬回應檔案，正在自動建立空白檔案: {mockFilePath}");
-                    
-                    var directory = System.IO.Path.GetDirectoryName(mockFilePath);
-                    if (!System.IO.Directory.Exists(directory))
-                    {
-                        System.IO.Directory.CreateDirectory(directory);
-                    }
-
-                    string defaultMockContent = @"{
-  ""candidates"": [
-    {
-      ""content"": {
-        ""parts"": [
-          {
-            ""text"": ""請在這裡填寫你想測試的回應內容。\n支援多行與 Markdown 格式。\n例如：\n\n這是一個測試回應。""
-          }
-        ],
-        ""role"": ""model""
-      },
-      ""finishReason"": ""STOP""
-    }
-  ]
-}";
-                    System.IO.File.WriteAllText(mockFilePath, defaultMockContent, Encoding.UTF8);
-                    
-                    throw new Exception($"尚未設定 API KEY，且找不到模擬回應檔案。\n系統已自動於路徑建立空白檔案：{mockFilePath}\n請在該檔案中的 'text' 欄位填入您想測試的回應內容後再試一次。");
-                }
+                return MockDataManager.GetMockResponse("Gemini");
             }
 
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
