@@ -21,7 +21,7 @@ namespace Antigravity02.Agents
     /// 多重 AI 代理模組：允許主 Agent 創建並諮詢其他特定角色的 AI 專家
     /// 支援多輪對話，每位專家擁有獨立的記憶與上下文
     /// </summary>
-    public class MultiAgentModule : IAgentModule
+    public class MultiAgentModule : BaseAgentModule
     {
         private readonly IAIClient _client;
 
@@ -53,7 +53,7 @@ namespace Antigravity02.Agents
             }
         }
 
-        public IEnumerable<object> GetToolDeclarations(IAIClient client)
+        protected override IEnumerable<object> BuildToolDeclarations(IAIClient client)
         {
             yield return client.CreateFunctionDeclaration(
                 "consult_expert",
@@ -98,11 +98,14 @@ namespace Antigravity02.Agents
             );
         }
 
-        public async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
+        public override async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
         {
             switch (funcName)
             {
                 case "consult_expert":
+                    string errCE = CheckRequiredArgs(funcName, args);
+                    if (errCE != null) return errCE;
+
                     string expertName = args.ContainsKey("expert_name") ? args["expert_name"].ToString() : "default";
                     string question = args.ContainsKey("question") ? args["question"].ToString() : "";
                     string role = args.ContainsKey("role") ? args["role"].ToString() : null;
@@ -112,6 +115,9 @@ namespace Antigravity02.Agents
                     return ListExperts();
 
                 case "dismiss_expert":
+                    string errDE = CheckRequiredArgs(funcName, args);
+                    if (errDE != null) return errDE;
+
                     string dismissName = args.ContainsKey("expert_name") ? args["expert_name"].ToString() : "";
                     return DismissExpert(dismissName);
 

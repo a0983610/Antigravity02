@@ -9,11 +9,11 @@ namespace Antigravity02.Agents
     /// <summary>
     /// 提供 HTTP 請求功能 (GET / POST) 的模組
     /// </summary>
-    public class HttpModule : IAgentModule
+    public class HttpModule : BaseAgentModule
     {
         private readonly HttpTools _httpTools = new HttpTools();
 
-        public IEnumerable<object> GetToolDeclarations(IAIClient client)
+        protected override IEnumerable<object> BuildToolDeclarations(IAIClient client)
         {
             yield return client.CreateFunctionDeclaration(
                 "http_get",
@@ -48,16 +48,22 @@ namespace Antigravity02.Agents
             );
         }
 
-        public async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
+        public override async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
         {
             switch (funcName)
             {
                 case "http_get":
+                    string errGet = CheckRequiredArgs(funcName, args);
+                    if (errGet != null) return errGet;
+
                     string getUrl = args["url"].ToString();
                     string getHeaders = args.ContainsKey("headers") ? args["headers"].ToString() : null;
                     return await _httpTools.GetAsync(getUrl, getHeaders);
 
                 case "http_post":
+                    string errPost = CheckRequiredArgs(funcName, args);
+                    if (errPost != null) return errPost;
+
                     string postUrl = args["url"].ToString();
                     string body = args["body"].ToString();
                     string contentType = args.ContainsKey("contentType") ? args["contentType"].ToString() : "application/json";

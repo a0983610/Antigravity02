@@ -9,7 +9,7 @@ using Antigravity02.UI;
 
 namespace Antigravity02.Agents
 {
-    public class FileModule : IAgentModule
+    public class FileModule : BaseAgentModule
     {
         private readonly FileTools _fileTools;
         private readonly IAIClient _fastClient;
@@ -27,7 +27,7 @@ namespace Antigravity02.Agents
             _hasFastModel = _fastClient != null;
         }
 
-        public IEnumerable<object> GetToolDeclarations(IAIClient client)
+        protected override IEnumerable<object> BuildToolDeclarations(IAIClient client)
         {
             yield return client.CreateFunctionDeclaration(
                 "list_files",
@@ -132,7 +132,7 @@ namespace Antigravity02.Agents
             );
         }
 
-        public async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
+        public override async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
         {
             switch (funcName)
             {
@@ -140,7 +140,9 @@ namespace Antigravity02.Agents
                     string subPath = args.ContainsKey("path") ? args["path"].ToString() : "";
                     return _fileTools.ListFiles(subPath);
                 case "read_file":
-                    if (!args.ContainsKey("filePath")) return "Error: Missing 'filePath' argument.";
+                    string errRead = CheckRequiredArgs(funcName, args);
+                    if (errRead != null) return errRead;
+
                     string fileContent = _fileTools.ReadFile(args["filePath"].ToString());
                     string fileQuery = args.ContainsKey("summaryQuery") ? args["summaryQuery"].ToString() : null;
 
@@ -156,17 +158,23 @@ namespace Antigravity02.Agents
                     }
                     return fileContent;
                 case "write_file":
-                    if (!args.ContainsKey("filePath") || !args.ContainsKey("content")) return "Error: Missing 'filePath' or 'content' argument.";
+                    string errWrite = CheckRequiredArgs(funcName, args);
+                    if (errWrite != null) return errWrite;
+
                     bool append = args.ContainsKey("append") ? Convert.ToBoolean(args["append"]) : true;
                     return _fileTools.WriteFile(
                         args["filePath"].ToString(),
                         args["content"].ToString(),
                         append);
                 case "delete_file":
-                    if (!args.ContainsKey("filePath")) return "Error: Missing 'filePath' argument.";
+                    string errDel = CheckRequiredArgs(funcName, args);
+                    if (errDel != null) return errDel;
+
                     return _fileTools.DeleteFile(args["filePath"].ToString());
                 case "update_file_line":
-                    if (!args.ContainsKey("filePath") || !args.ContainsKey("lineNumber") || !args.ContainsKey("newContent")) return "Error: Missing required arguments.";
+                    string errUpd = CheckRequiredArgs(funcName, args);
+                    if (errUpd != null) return errUpd;
+
                     int lineNum = Convert.ToInt32(args["lineNumber"]);
                     string newContent = args["newContent"].ToString();
                     return _fileTools.UpdateFileLine(args["filePath"].ToString(), lineNum, newContent);
@@ -174,7 +182,9 @@ namespace Antigravity02.Agents
                     // 固定讀取 AI_Workspace/.agent/skills 目錄
                     return _fileTools.ReadSkills(_fileTools.SkillsPath);
                 case "write_skill":
-                    if (!args.ContainsKey("skillName") || !args.ContainsKey("name") || !args.ContainsKey("description") || !args.ContainsKey("content")) return "Error: Missing required arguments.";
+                    string errWriteSk = CheckRequiredArgs(funcName, args);
+                    if (errWriteSk != null) return errWriteSk;
+
                     string sName = args["skillName"].ToString();
                     string name = args["name"].ToString();
                     string desc = args["description"].ToString();

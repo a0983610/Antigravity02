@@ -10,7 +10,7 @@ namespace Antigravity02.Agents
     /// <summary>
     /// 提供 AI 自我控制與調整的模組
     /// </summary>
-    public class AIControlModule : IAgentModule
+    public class AIControlModule : BaseAgentModule
     {
         private readonly BaseAgent _agent;
         private readonly bool _hasDifferentFastModel;
@@ -21,7 +21,7 @@ namespace Antigravity02.Agents
             _hasDifferentFastModel = agent != null && agent.SmartClient.ModelName != agent.FastClient.ModelName;
         }
 
-        public IEnumerable<object> GetToolDeclarations(IAIClient client)
+        protected override IEnumerable<object> BuildToolDeclarations(IAIClient client)
         {
             if (_hasDifferentFastModel && _agent != null)
             {
@@ -46,10 +46,13 @@ namespace Antigravity02.Agents
             }
         }
 
-        public Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
+        public override Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
         {
             if (funcName == "switch_model_mode" && _agent != null)
             {
+                string error = CheckRequiredArgs(funcName, args);
+                if (error != null) return Task.FromResult(error);
+
                 string mode = args["mode"].ToString();
                 _agent.SetModelMode(mode);
                 return Task.FromResult($"成功：已切換至 {mode} 模式。接下來的對話將使用此模式的模型進行回應。");
