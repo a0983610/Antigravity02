@@ -22,5 +22,14 @@ namespace Antigravity02.AIClient
             IAgentUI ui, 
             string currentModelName,
             Func<string, Dictionary<string, object>, Task<string>> toolExecutor);
+            
+        bool TryGetTextFromPart(object partObj, out string text);
+        bool TryGetFunctionCallFromPart(object partObj, out string functionName, out Dictionary<string, object> args);
+        bool TryGetFunctionResponseFromPart(object partObj, out string functionName, out string responseContent);
+        bool TryGetRoleAndPartsFromMessage(object messageObj, out string role, out IEnumerable<object> parts);
+        object BuildToolResponsePart(string funcName, string result);
+        object BuildFunctionMessageContent(List<object> toolResponseParts);
+        object BuildUserMessageContent(string text);
+        object BuildModelMessageContent(string text);
     }
 }

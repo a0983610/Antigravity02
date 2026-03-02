@@ -141,7 +141,7 @@ namespace Antigravity02.Agents
             string finalPrompt = EnableTimestampHeader ? 
                 $"[Current Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}]\n{userPrompt}" : 
                 userPrompt;
-            ChatHistory.Add(new { role = "user", parts = new[] { new { text = finalPrompt } } });
+            ChatHistory.Add(Client.BuildUserMessageContent(finalPrompt));
         }
 
         private GenerateContentRequest CreateRequest()
@@ -199,7 +199,7 @@ namespace Antigravity02.Agents
 
         private void HandleFunctionCallHistoryUpdate(List<object> toolResponseParts)
         {
-            ChatHistory.Add(new { role = "function", parts = toolResponseParts });
+            ChatHistory.Add(Client.BuildFunctionMessageContent(toolResponseParts));
 
             if (_modelSwitchHappenedInThisTurn && toolResponseParts.Count == 1)
             {
@@ -218,8 +218,8 @@ namespace Antigravity02.Agents
             
             if (ChatHistory.Count > 0)
             {
-                var lastEntry = ChatHistory[ChatHistory.Count - 1] as Dictionary<string, object>;
-                if (lastEntry != null && lastEntry.ContainsKey("role") && lastEntry["role"]?.ToString() == "model")
+                var lastEntry = ChatHistory[ChatHistory.Count - 1];
+                if (Client.TryGetRoleAndPartsFromMessage(lastEntry, out string lastRole, out _) && lastRole == "model")
                 {
                     ChatHistory.RemoveAt(ChatHistory.Count - 1);
                 }
@@ -291,24 +291,12 @@ namespace Antigravity02.Agents
             int targetSplitIndex = ChatHistory.Count / 2;
             for (int i = targetSplitIndex; i < ChatHistory.Count; i++)
             {
-                string role = ExtractRoleFromHistoryItem(ChatHistory[i]);
-                if (role == "user")
+                if (Client.TryGetRoleAndPartsFromMessage(ChatHistory[i], out string role, out _) && role == "user")
                 {
                     return i;
                 }
             }
             return -1;
-        }
-
-        private string ExtractRoleFromHistoryItem(object item)
-        {
-            if (item is Dictionary<string, object> dict && dict.ContainsKey("role"))
-            {
-                return dict["role"]?.ToString();
-            }
-            string serialized = JsonTools.Serialize(item);
-            var tempDict = JsonTools.Deserialize<Dictionary<string, object>>(serialized);
-            return tempDict != null && tempDict.ContainsKey("role") ? tempDict["role"]?.ToString() : "";
         }
 
         private async Task<string> GenerateSummaryAsync(string prompt)
@@ -317,7 +305,7 @@ namespace Antigravity02.Agents
             {
                 Contents = new List<object>
                 {
-                    new { role = "user", parts = new[] { new { text = prompt } } }
+                    FastClient.BuildUserMessageContent(prompt)
                 }
             };
 
@@ -330,8 +318,8 @@ namespace Antigravity02.Agents
         private void ApplyHistoryCompression(int splitIndex, string summaryText, IAgentUI ui)
         {
             ChatHistory.RemoveRange(0, splitIndex);
-            ChatHistory.Insert(0, new { role = "user", parts = new[] { new { text = "以下是之前對話的歷史摘要：\n" + summaryText } } });
-            ChatHistory.Insert(1, new { role = "model", parts = new[] { new { text = "已收到歷史紀錄摘要，我會根據這些資訊上下文繼續回應並執行任務。" } } });
+            ChatHistory.Insert(0, Client.BuildUserMessageContent("以下是之前對話的歷史摘要：\n" + summaryText));
+            ChatHistory.Insert(1, Client.BuildModelMessageContent("已收到歷史紀錄摘要，我會根據這些資訊上下文繼續回應並執行任務。"));
             ui.ReportToolResult($"歷史紀錄 Token 過高，已自動將前半段 ({splitIndex} 則對話) 壓縮為摘要，釋放 Token 空間。");
         }
 

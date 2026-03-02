@@ -276,19 +276,123 @@ namespace Antigravity02.AIClient
             return (hasFunctionCall, toolResponseParts);
         }
 
-        private List<object> BuildToolResponseParts(string funcName, string result)
+        public bool TryGetTextFromPart(object partObj, out string text)
         {
-            var parts = new List<object>();
+            text = null;
+            if (partObj is Dictionary<string, object> part && part.ContainsKey("text"))
+            {
+                text = part["text"]?.ToString();
+                return true;
+            }
+            return false;
+        }
 
-            parts.Add(new
+        public bool TryGetFunctionCallFromPart(object partObj, out string functionName, out Dictionary<string, object> args)
+        {
+            functionName = null;
+            args = null;
+            if (partObj is Dictionary<string, object> part && part.ContainsKey("functionCall"))
+            {
+                if (part["functionCall"] is Dictionary<string, object> call && call.ContainsKey("name"))
+                {
+                    functionName = call["name"]?.ToString();
+                    args = (call.ContainsKey("args") ? call["args"] as Dictionary<string, object> : null) ?? new Dictionary<string, object>();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool TryGetFunctionResponseFromPart(object partObj, out string functionName, out string responseContent)
+        {
+            functionName = null;
+            responseContent = null;
+            if (partObj is Dictionary<string, object> part && part.ContainsKey("functionResponse"))
+            {
+                if (part["functionResponse"] is Dictionary<string, object> resp && resp.ContainsKey("name"))
+                {
+                    functionName = resp["name"]?.ToString();
+                    if (resp.ContainsKey("response") && resp["response"] is Dictionary<string, object> respBody && respBody.ContainsKey("content"))
+                    {
+                        responseContent = respBody["content"]?.ToString();
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool TryGetRoleAndPartsFromMessage(object messageObj, out string role, out IEnumerable<object> parts)
+        {
+            role = null;
+            parts = null;
+            
+            Dictionary<string, object> dict = null;
+
+            if (messageObj is Dictionary<string, object> d)
+            {
+                dict = d;
+            }
+            else
+            {
+                // 若為匿名型別，嘗試序列化再反序列化
+                string serialized = JsonTools.Serialize(messageObj);
+                dict = JsonTools.Deserialize<Dictionary<string, object>>(serialized);
+            }
+
+            if (dict != null)
+            {
+                if (dict.ContainsKey("role"))
+                {
+                    role = dict["role"]?.ToString();
+                }
+                if (dict.ContainsKey("parts") && dict["parts"] is System.Collections.IEnumerable enumerableParts)
+                {
+                    var list = new List<object>();
+                    foreach (var p in enumerableParts)
+                    {
+                        list.Add(p);
+                    }
+                    parts = list;
+                }
+                
+                return role != null && parts != null;
+            }
+
+            return false;
+        }
+
+        public object BuildToolResponsePart(string funcName, string result)
+        {
+            return new
             {
                 functionResponse = new
                 {
                     name = funcName,
                     response = new { content = result }
                 }
-            });
+            };
+        }
 
+        public object BuildFunctionMessageContent(List<object> toolResponseParts)
+        {
+            return new { role = "function", parts = toolResponseParts };
+        }
+
+        public object BuildUserMessageContent(string text)
+        {
+            return new { role = "user", parts = new[] { new { text = text } } };
+        }
+
+        public object BuildModelMessageContent(string text)
+        {
+            return new { role = "model", parts = new[] { new { text = text } } };
+        }
+
+        private List<object> BuildToolResponseParts(string funcName, string result)
+        {
+            var parts = new List<object>();
+            parts.Add(BuildToolResponsePart(funcName, result));
             return parts;
         }
     }

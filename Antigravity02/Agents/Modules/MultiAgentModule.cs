@@ -175,7 +175,7 @@ namespace Antigravity02.Agents
                 historySnapshot = session.History.Count;
 
                 // 將使用者問題加入此專家的對話歷史
-                session.History.Add(new { role = "user", parts = new[] { new { text = question } } });
+                session.History.Add(_client.BuildUserMessageContent(question));
 
                 int maxIterations = 5;
                 int iterations = 0;
@@ -198,81 +198,60 @@ namespace Antigravity02.Agents
 
                     // 解析回應
                     var data = JsonTools.Deserialize<Dictionary<string, object>>(responseJson);
-                    var candidates = data["candidates"] as System.Collections.ArrayList;
+                    var parts = _client.ExtractResponseParts(data, out var modelContent);
 
-                    if (candidates == null || candidates.Count == 0) break;
-
-                    var candidate = candidates[0] as Dictionary<string, object>;
-                    var modelContent = (candidate != null && candidate.ContainsKey("content")) ? candidate["content"] as Dictionary<string, object> : new Dictionary<string, object>();
-                    var parts = (modelContent != null && modelContent.ContainsKey("parts")) ? modelContent["parts"] as System.Collections.ArrayList : new System.Collections.ArrayList();
+                    if (parts == null || parts.Count == 0) break;
 
                     // 將模型回應加入對話歷史 (保持多輪對話)
-                    session.History.Add(modelContent);
-
-                    if (parts != null)
+                    if (modelContent != null)
                     {
-                        bool hasFunctionCall = false;
-                        var toolResponseParts = new List<object>();
-                        var textParts = new System.Text.StringBuilder();
+                        session.History.Add(modelContent);
+                    }
 
-                        foreach (Dictionary<string, object> part in parts)
+                    bool hasFunctionCall = false;
+                    var toolResponseParts = new List<object>();
+                    var textParts = new System.Text.StringBuilder();
+
+                    foreach (object part in parts)
+                    {
+                        if (_client.TryGetTextFromPart(part, out string partText))
                         {
-                            if (part.ContainsKey("text"))
+                            textParts.AppendLine(partText);
+                            // --- UI: 即時顯示文字思考/片段 ---
+                            if (!string.IsNullOrWhiteSpace(partText))
                             {
-                                string partText = part["text"].ToString();
-                                textParts.AppendLine(partText);
-                                // --- UI: 即時顯示文字思考/片段 ---
-                                if (!string.IsNullOrWhiteSpace(partText))
-                                {
-                                    ui.ReportInfo($"[Expert: {expertName}] {partText}");
-                                }
-                            }
-
-                            if (part.ContainsKey("functionCall"))
-                            {
-                                hasFunctionCall = true;
-                                var call = part["functionCall"] as Dictionary<string, object>;
-                                string funcName = call["name"].ToString();
-                                var argsDict = (call.ContainsKey("args") ? call["args"] as Dictionary<string, object> : null) ?? new Dictionary<string, object>();
-
-                                ui.ReportInfo($"[Expert: {expertName}] 呼叫工具 {funcName}...");
-
-                                // 執行工具呼叫
-                                string result = await _fileModule.TryHandleToolCallAsync(funcName, argsDict, ui);
-                                if (result == null) result = await _httpModule.TryHandleToolCallAsync(funcName, argsDict, ui);
-                                if (result == null) result = "Error: Unknown tool.";
-
-
-
-                                toolResponseParts.Add(new
-                                {
-                                    functionResponse = new
-                                    {
-                                        name = funcName,
-                                        response = new { content = result }
-                                    }
-                                });
-                                ui.ReportInfo($"[Expert: {expertName}] 工具返回結果長度: {result.Length}");
+                                ui.ReportInfo($"[Expert: {expertName}] {partText}");
                             }
                         }
 
-                        if (hasFunctionCall)
+                        if (_client.TryGetFunctionCallFromPart(part, out string funcName, out var argsDict))
                         {
-                            // 加入 function 回應，繼續下一輪
-                            session.History.Add(new { role = "function", parts = toolResponseParts });
+                            hasFunctionCall = true;
+
+                            ui.ReportInfo($"[Expert: {expertName}] 呼叫工具 {funcName}...");
+
+                            // 執行工具呼叫
+                            string result = await _fileModule.TryHandleToolCallAsync(funcName, argsDict, ui);
+                            if (result == null) result = await _httpModule.TryHandleToolCallAsync(funcName, argsDict, ui);
+                            if (result == null) result = "Error: Unknown tool.";
+
+                            toolResponseParts.Add(_client.BuildToolResponsePart(funcName, result));
+                            ui.ReportInfo($"[Expert: {expertName}] 工具返回結果長度: {result.Length}");
                         }
-                        else
-                        {
-                            // 沒有呼叫工具，為最終文字回應
-                            if (textParts.Length > 0)
-                            {
-                                finalResponseText = textParts.ToString().TrimEnd();
-                            }
-                            break;
-                        }
+                    }
+
+                    if (hasFunctionCall)
+                    {
+                        // 加入 function 回應，繼續下一輪
+                        session.History.Add(_client.BuildFunctionMessageContent(toolResponseParts));
                     }
                     else
                     {
+                        // 沒有呼叫工具，為最終文字回應
+                        if (textParts.Length > 0)
+                        {
+                            finalResponseText = textParts.ToString().TrimEnd();
+                        }
                         break;
                     }
                 } // end while

@@ -71,7 +71,7 @@ namespace Antigravity02
                 if (agent.LoadChatHistory(path))
                 {
                     Console.WriteLine($"[System] Chat history loaded from {path}");
-                    DisplayChatHistory(agent.GetChatHistory());
+                    DisplayChatHistory(agent.GetChatHistory(), agent.SmartClient);
                 }
                 else
                 {
@@ -114,7 +114,7 @@ namespace Antigravity02
         /// <summary>
         /// 將對話紀錄以摘要方式顯示在畫面上，讓使用者了解對話脈絡
         /// </summary>
-        private static void DisplayChatHistory(ReadOnlyCollection<object> chatHistory)
+        private static void DisplayChatHistory(ReadOnlyCollection<object> chatHistory, Antigravity02.AIClient.IAIClient client)
         {
             if (chatHistory == null || chatHistory.Count == 0)
             {
@@ -130,72 +130,49 @@ namespace Antigravity02
 
             foreach (var entry in chatHistory)
             {
-                var dict = entry as Dictionary<string, object>;
-                if (dict == null) continue;
-
-                string role = dict.ContainsKey("role") ? dict["role"]?.ToString() : null;
-                var parts = dict.ContainsKey("parts") ? dict["parts"] as ArrayList : null;
-                if (parts == null) continue;
+                if (!client.TryGetRoleAndPartsFromMessage(entry, out string role, out var parts)) continue;
 
                 if (role == "user")
                 {
-                    foreach (Dictionary<string, object> part in parts)
+                    foreach (object part in parts)
                     {
-                        if (part.ContainsKey("text"))
+                        if (client.TryGetTextFromPart(part, out string text))
                         {
                             Console.ForegroundColor = ConsoleColor.Cyan;
-                            Console.WriteLine($"\nUser: {part["text"]}");
+                            Console.WriteLine($"\nUser: {text}");
                             Console.ResetColor();
                         }
                     }
                 }
                 else if (role == "model")
                 {
-                    foreach (Dictionary<string, object> part in parts)
+                    foreach (object part in parts)
                     {
-                        if (part.ContainsKey("text"))
+                        if (client.TryGetTextFromPart(part, out string text))
                         {
                             Console.ForegroundColor = ConsoleColor.White;
-                            Console.WriteLine($"\nAI: {part["text"]}");
+                            Console.WriteLine($"\nAI: {text}");
                             Console.ResetColor();
                         }
-                        if (part.ContainsKey("functionCall"))
+                        if (client.TryGetFunctionCallFromPart(part, out string funcName, out var args))
                         {
-                            var call = part["functionCall"] as Dictionary<string, object>;
-                            if (call != null)
-                            {
-                                string funcName = call.ContainsKey("name") ? call["name"]?.ToString() : "?";
-                                Console.ForegroundColor = ConsoleColor.Green;
-                                Console.WriteLine($"  [Tool Call] {funcName}");
-                                Console.ResetColor();
-                            }
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"  [Tool Call] {funcName ?? "?"}");
+                            Console.ResetColor();
                         }
                     }
                 }
                 else if (role == "function")
                 {
-                    foreach (Dictionary<string, object> part in parts)
+                    foreach (object part in parts)
                     {
-                        if (part.ContainsKey("functionResponse"))
+                        if (client.TryGetFunctionResponseFromPart(part, out string funcName, out string content))
                         {
-                            var resp = part["functionResponse"] as Dictionary<string, object>;
-                            if (resp != null)
-                            {
-                                string funcName = resp.ContainsKey("name") ? resp["name"]?.ToString() : "?";
-                                string content = "";
-                                if (resp.ContainsKey("response"))
-                                {
-                                    var respBody = resp["response"] as Dictionary<string, object>;
-                                    if (respBody != null && respBody.ContainsKey("content"))
-                                    {
-                                        content = respBody["content"]?.ToString() ?? "";
-                                    }
-                                }
-                                string summary = content.Length > 80 ? content.Substring(0, 80) + "..." : content;
-                                Console.ForegroundColor = ConsoleColor.DarkGray;
-                                Console.WriteLine($"  [Tool Result] {funcName}: {summary}");
-                                Console.ResetColor();
-                            }
+                            content = content ?? "";
+                            string summary = content.Length > 80 ? content.Substring(0, 80) + "..." : content;
+                            Console.ForegroundColor = ConsoleColor.DarkGray;
+                            Console.WriteLine($"  [Tool Result] {funcName ?? "?"}: {summary}");
+                            Console.ResetColor();
                         }
                     }
                 }
