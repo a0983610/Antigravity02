@@ -77,7 +77,7 @@ namespace Antigravity02.Agents
 
             bool continueLoop = true;
             int currentIteration = 0;
-            const int maxIterations = 10;
+            const int maxIterations = 30;
 
             while (continueLoop && currentIteration < maxIterations)
             {

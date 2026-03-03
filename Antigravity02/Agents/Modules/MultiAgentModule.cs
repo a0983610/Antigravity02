@@ -177,7 +177,7 @@ namespace Antigravity02.Agents
                 // 將使用者問題加入此專家的對話歷史
                 session.History.Add(_client.BuildMessageContent("user", question));
 
-                int maxIterations = 5;
+                int maxIterations = 20;
                 int iterations = 0;
                 string finalResponseText = null;
 
