@@ -263,6 +263,12 @@ namespace Antigravity02.AIClient
                     string result = await toolExecutor(funcName, argsDict);
                     UsageLogger.LogAction(funcName, result);
 
+                    if (result == "[SKIP_FUNCTION_RESPONSE]")
+                    {
+                        ui.ReportToolResult("已成功將圖片注入對話歷史紀錄。");
+                        continue;
+                    }
+
                     var resultParts = BuildToolResponseParts(funcName, result);
                     toolResponseParts.AddRange(resultParts);
 
@@ -379,6 +385,26 @@ namespace Antigravity02.AIClient
         public object BuildMessageContent(string role, string text)
         {
             return new { role = role, parts = new[] { new { text = text } } };
+        }
+
+        public object BuildImageMessageContent(string role, string text, string mimeType, string base64Data)
+        {
+            return new
+            {
+                role = role,
+                parts = new object[]
+                {
+                    new { text = text },
+                    new
+                    {
+                        inlineData = new
+                        {
+                            mimeType = mimeType,
+                            data = base64Data
+                        }
+                    }
+                }
+            };
         }
 
         private List<object> BuildToolResponseParts(string funcName, string result)

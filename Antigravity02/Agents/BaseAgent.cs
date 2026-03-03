@@ -197,8 +197,44 @@ namespace Antigravity02.Agents
 
 
 
+        /// <summary>
+        /// 將圖片注入對話歷史紀錄。若當前回合有多個 function call，則拒絕注入並回傳 false。
+        /// </summary>
+        public bool InjectImageHistory(string imagePath, string mimeType, string base64Data)
+        {
+            if (ChatHistory.Count > 0)
+            {
+                var lastEntry = ChatHistory[ChatHistory.Count - 1];
+                if (Client.TryGetRoleAndPartsFromMessage(lastEntry, out string role, out var parts) && role == "model")
+                {
+                    // 檢查此輪 model 回應中是否有多個 function call
+                    int functionCallCount = 0;
+                    foreach (var part in parts)
+                    {
+                        if (Client.TryGetFunctionCallFromPart(part, out _, out _))
+                        {
+                            functionCallCount++;
+                        }
+                    }
+
+                    if (functionCallCount > 1)
+                    {
+                        return false; // 多工具同時呼叫時，拒絕注入以避免歷史紀錄結構損壞
+                    }
+
+                    ChatHistory.RemoveAt(ChatHistory.Count - 1);
+                }
+            }
+
+            ChatHistory.Add(Client.BuildMessageContent("model", $"可以請你提供這張圖片給我參考嗎？檔案路徑：{imagePath}"));
+            ChatHistory.Add(Client.BuildImageMessageContent("user", $"這是我提供的圖片：{imagePath}", mimeType, base64Data));
+            return true;
+        }
+
         private void HandleFunctionCallHistoryUpdate(List<object> toolResponseParts)
         {
+            if (toolResponseParts == null || toolResponseParts.Count == 0) return;
+
             ChatHistory.Add(Client.BuildFunctionMessageContent(toolResponseParts));
 
             if (_modelSwitchHappenedInThisTurn && toolResponseParts.Count == 1)

@@ -30,5 +30,6 @@ namespace Antigravity02.AIClient
         object BuildToolResponsePart(string funcName, string result);
         object BuildFunctionMessageContent(List<object> toolResponseParts);
         object BuildMessageContent(string role, string text);
+        object BuildImageMessageContent(string role, string text, string mimeType, string base64Data);
     }
 }

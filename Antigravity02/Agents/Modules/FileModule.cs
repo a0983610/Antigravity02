@@ -14,9 +14,11 @@ namespace Antigravity02.Agents
         private readonly FileTools _fileTools;
         private readonly IAIClient _fastClient;
         private readonly bool _hasFastModel;
+        private readonly BaseAgent _agent;
 
         public FileModule(BaseAgent agent)
         {
+            _agent = agent;
             _fileTools = new FileTools();
             if (agent != null)
             {
@@ -30,9 +32,23 @@ namespace Antigravity02.Agents
         protected override IEnumerable<object> BuildToolDeclarations(IAIClient client)
         {
             yield return client.CreateFunctionDeclaration(
+                "ask_for_image",
+                "讀取並解析特定路徑的圖片。提供圖片檔案路徑後，即可獲取該圖片供視覺分析使用。注意：此工具無法與其他工具同時呼叫，請單獨使用。",
+                new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        filePath = new { type = "string", description = "圖片檔案相對於 AI_Workspace 的路徑 (例如 test.png 或 images/test.png)" }
+                    },
+                    required = new[] { "filePath" }
+                }
+            );
+
+            yield return client.CreateFunctionDeclaration(
                 "list_files",
                 "以樹狀結構列出 AI_Workspace 底下指定資料夾路徑下（最多 3 層）的所有檔案與子資料夾。預設可不填代表根目錄。",
-                new { type = "object", properties = new { path = new { type = "string", description = "資料夾相對路徑 (例如 / 或 notes)" } } }
+                new { type = "object", properties = new { path = new { type = "string", description = "相對於 AI_Workspace 的資料夾路徑 (例如 / 或 notes)" } } }
             );
 
             yield return client.CreateFunctionDeclaration(
@@ -44,7 +60,7 @@ namespace Antigravity02.Agents
                         type = "object",
                         properties = new
                         {
-                            filePath = new { type = "string", description = "檔案路徑 (例如 notes.txt)" },
+                            filePath = new { type = "string", description = "相對於 AI_Workspace 的檔案路徑 (例如 notes.txt)" },
                             summaryQuery = new { type = "string", description = "僅讀取符合此查詢的重點 (選填，使用快速模型處理)" }
                         },
                         required = new[] { "filePath" }
@@ -52,7 +68,7 @@ namespace Antigravity02.Agents
                     : (object)new
                     {
                         type = "object",
-                        properties = new { filePath = new { type = "string", description = "檔案路徑 (例如 notes.txt)" } },
+                        properties = new { filePath = new { type = "string", description = "相對於 AI_Workspace 的檔案路徑 (例如 notes.txt)" } },
                         required = new[] { "filePath" }
                     }
             );
@@ -65,7 +81,7 @@ namespace Antigravity02.Agents
                     type = "object",
                     properties = new
                     {
-                        filePath = new { type = "string", description = "檔名 (例如 notes.txt)" },
+                        filePath = new { type = "string", description = "相對於 AI_Workspace 的檔案路徑 (例如 notes.txt)" },
                         content = new { type = "string", description = "內容" },
                         append = new { type = "boolean", description = "true=附加內容到最後 (預設); false=覆蓋所有內容" }
                     },
@@ -81,7 +97,7 @@ namespace Antigravity02.Agents
                     type = "object",
                     properties = new
                     {
-                        filePath = new { type = "string", description = "檔案路徑 (例如 notes.txt)" }
+                        filePath = new { type = "string", description = "相對於 AI_Workspace 的檔案路徑 (例如 notes.txt)" }
                     },
                     required = new[] { "filePath" }
                 }
@@ -95,7 +111,7 @@ namespace Antigravity02.Agents
                     type = "object",
                     properties = new
                     {
-                        filePath = new { type = "string", description = "檔名 (例如 notes.txt)" },
+                        filePath = new { type = "string", description = "相對於 AI_Workspace 的檔案路徑 (例如 notes.txt)" },
                         lineNumber = new { type = "integer", description = "要修改的行號 (1-based)" },
                         newContent = new { type = "string", description = "該行的新內容" }
                     },
@@ -136,6 +152,64 @@ namespace Antigravity02.Agents
         {
             switch (funcName)
             {
+                case "ask_for_image":
+                    string errAskImg = CheckRequiredArgs(funcName, args);
+                    if (errAskImg != null) return errAskImg;
+
+                    string imgPath = args["filePath"].ToString();
+                    string aiWorkspacePath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AI_Workspace"));
+                    
+                    // 自動移除 AI_Workspace 前綴 (若 AI 誤傳)
+                    string cleanedPath = imgPath;
+                    string prefixSlash = "AI_Workspace/";
+                    string prefixBackslash = "AI_Workspace\\";
+                    if (cleanedPath.StartsWith(prefixSlash, StringComparison.OrdinalIgnoreCase))
+                        cleanedPath = cleanedPath.Substring(prefixSlash.Length);
+                    else if (cleanedPath.StartsWith(prefixBackslash, StringComparison.OrdinalIgnoreCase))
+                        cleanedPath = cleanedPath.Substring(prefixBackslash.Length);
+
+                    if (!File.Exists(cleanedPath))
+                    {
+                        // 嘗試以 AI_Workspace 相對路徑解析
+                        string workspaceImgPath = Path.GetFullPath(Path.Combine(aiWorkspacePath, cleanedPath.TrimStart('/', '\\')));
+                        if (File.Exists(workspaceImgPath))
+                        {
+                            cleanedPath = workspaceImgPath;
+                        }
+                        else
+                        {
+                            return $"[Error] 找不到檔案: {imgPath} (已嘗試絕對路徑與 AI_Workspace 相對路徑)";
+                        }
+                    }
+                    imgPath = cleanedPath;
+
+                    try
+                    {
+                        string ext = Path.GetExtension(imgPath).ToLower();
+                        string mime = "image/jpeg";
+                        if (ext == ".png") mime = "image/png";
+                        else if (ext == ".webp") mime = "image/webp";
+                        else if (ext == ".heic") mime = "image/heic";
+                        else if (ext == ".heif") mime = "image/heif";
+                        
+                        byte[] bytes = File.ReadAllBytes(imgPath);
+                        string base64 = Convert.ToBase64String(bytes);
+                        
+                        if (_agent != null)
+                        {
+                            if (!_agent.InjectImageHistory(imgPath, mime, base64))
+                            {
+                                return "[Error] ask_for_image 無法與其他工具同時呼叫，請單獨使用此工具來讀取圖片。";
+                            }
+                        }
+                        
+                        return "[SKIP_FUNCTION_RESPONSE]";
+                    }
+                    catch (Exception ex)
+                    {
+                        return $"[Error] 讀取圖片失敗: {ex.Message}";
+                    }
+
                 case "list_files":
                     string subPath = args.ContainsKey("path") ? args["path"].ToString() : "";
                     return _fileTools.ListFiles(subPath);

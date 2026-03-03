@@ -61,15 +61,41 @@ namespace Antigravity02.Tools
             return normalizedTarget.StartsWith(normalizedAllowed, StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>
+        /// 自動移除路徑開頭的 AI_Workspace/ 或 AI_Workspace\ 前綴 (若 AI 誤傳)。
+        /// 僅在前綴後緊接 / 或 \ 時才移除，避免誤判 (例如 AI_WorkspaceSecret 不會被匹配)。
+        /// </summary>
+        private string StripOutputFolderPrefix(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return path;
+
+            // 完全等於 AI_Workspace (不帶斜線)
+            if (path.Equals(_aiOutputFolder, StringComparison.OrdinalIgnoreCase))
+                return "";
+
+            // 以 AI_Workspace/ 或 AI_Workspace\ 開頭
+            string prefixSlash = _aiOutputFolder + "/";
+            string prefixBackslash = _aiOutputFolder + "\\";
+            if (path.StartsWith(prefixSlash, StringComparison.OrdinalIgnoreCase))
+                return path.Substring(prefixSlash.Length);
+            if (path.StartsWith(prefixBackslash, StringComparison.OrdinalIgnoreCase))
+                return path.Substring(prefixBackslash.Length);
+
+            return path;
+        }
+
         public string ListFiles(string subPath = "")
         {
             try
             {
+                // 自動移除 AI_Workspace 前綴 (若 AI 誤傳)
+                subPath = StripOutputFolderPrefix(subPath);
+
                 // 安全檢查：不允許向上層目錄存取
                 if (subPath.Contains("..")) return "錯誤：禁止存取上層目錄。";
 
                 string aiWorkspacePath = Path.GetFullPath(Path.Combine(_baseDirectory, _aiOutputFolder));
-                string targetPath = Path.GetFullPath(Path.Combine(aiWorkspacePath, subPath));
+                string targetPath = Path.GetFullPath(Path.Combine(aiWorkspacePath, subPath.TrimStart('/', '\\')));
                 
                 // 確保目標路徑仍在 AI_Workspace 內
                 if (!IsPathAllowed(targetPath, aiWorkspacePath))
@@ -146,10 +172,13 @@ namespace Antigravity02.Tools
         {
             try
             {
+                // 自動移除 AI_Workspace 前綴 (若 AI 誤傳)
+                fileName = StripOutputFolderPrefix(fileName);
+
                 if (fileName.Contains("..")) return "錯誤：格式不合法。";
 
                 string aiWorkspacePath = Path.GetFullPath(Path.Combine(_baseDirectory, _aiOutputFolder));
-                string filePath = Path.GetFullPath(Path.Combine(aiWorkspacePath, fileName));
+                string filePath = Path.GetFullPath(Path.Combine(aiWorkspacePath, fileName.TrimStart('/', '\\')));
 
                 // 安全檢查
                 if (!IsPathAllowed(filePath, aiWorkspacePath))
@@ -189,6 +218,9 @@ namespace Antigravity02.Tools
         {
             try
             {
+                // 自動移除 AI_Workspace 前綴 (若 AI 誤傳)
+                fileName = StripOutputFolderPrefix(fileName);
+
                 // 如果沒有指定副檔名，預設使用 .txt
                 if (string.IsNullOrEmpty(Path.GetExtension(fileName)))
                 {
@@ -198,7 +230,7 @@ namespace Antigravity02.Tools
                 // 防禦 Path Traversal
                 if (fileName.Contains("..")) return "錯誤：格式不合法。";
 
-                string filePath = Path.GetFullPath(Path.Combine(_baseDirectory, _aiOutputFolder, fileName));
+                string filePath = Path.GetFullPath(Path.Combine(_baseDirectory, _aiOutputFolder, fileName.TrimStart('/', '\\')));
                 string aiWorkspacePath = Path.GetFullPath(Path.Combine(_baseDirectory, _aiOutputFolder));
 
                 // 安全檢查：確保目標路徑仍在 AI_Workspace 內
@@ -236,10 +268,13 @@ namespace Antigravity02.Tools
         {
             try
             {
+                // 自動移除 AI_Workspace 前綴 (若 AI 誤傳)
+                fileName = StripOutputFolderPrefix(fileName);
+
                 if (fileName.Contains("..")) return "錯誤：格式不合法。";
 
                 string aiWorkspacePath = Path.GetFullPath(Path.Combine(_baseDirectory, _aiOutputFolder));
-                string filePath = Path.GetFullPath(Path.Combine(aiWorkspacePath, fileName));
+                string filePath = Path.GetFullPath(Path.Combine(aiWorkspacePath, fileName.TrimStart('/', '\\')));
 
                 // 安全檢查
                 if (!IsPathAllowed(filePath, aiWorkspacePath))
@@ -267,10 +302,13 @@ namespace Antigravity02.Tools
         {
             try
             {
+                // 自動移除 AI_Workspace 前綴 (若 AI 誤傳)
+                fileName = StripOutputFolderPrefix(fileName);
+
                 if (fileName.Contains("..")) return "錯誤：格式不合法。";
 
                 string aiWorkspacePath = Path.GetFullPath(Path.Combine(_baseDirectory, _aiOutputFolder));
-                string filePath = Path.GetFullPath(Path.Combine(aiWorkspacePath, fileName));
+                string filePath = Path.GetFullPath(Path.Combine(aiWorkspacePath, fileName.TrimStart('/', '\\')));
 
                 // 安全檢查
                 if (!IsPathAllowed(filePath, aiWorkspacePath))
@@ -368,7 +406,7 @@ namespace Antigravity02.Tools
             {
                 if (subPath.Contains("..")) return "錯誤：禁止存取上層目錄。";
 
-                string targetPath = Path.GetFullPath(Path.Combine(_baseDirectory, subPath));
+                string targetPath = Path.GetFullPath(Path.Combine(_baseDirectory, subPath.TrimStart('/', '\\')));
                 
                 if (!IsPathAllowed(targetPath, _baseDirectory))
                     return "錯誤：超出授權存取範圍。";
