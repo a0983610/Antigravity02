@@ -60,6 +60,8 @@ namespace Antigravity02.Agents
         // 新增：歷史紀錄壓縮 Token 閾值
         public int TokenThresholdForCompression { get; set; } = 800000;
 
+        private bool _hasWorkspaceExceededLimit = false;
+
         protected BaseAgent(IAIClient smartClient, IAIClient fastClient)
         {
             SmartClient = smartClient;
@@ -193,7 +195,7 @@ namespace Antigravity02.Agents
             
             if (!string.IsNullOrWhiteSpace(skillsData))
             {
-                additionalInfo += $"Available Skills (from read_skills):\n{skillsData}\n\n";
+                additionalInfo += $"[Available Skills]\n{skillsData}\n\n";
             }
 
             // 新增：讀取知識庫索引
@@ -206,10 +208,40 @@ namespace Antigravity02.Agents
                 {
                     indexContent = string.Join("\n", lines.Take(20)) + "\n... (Index truncated)";
                 }
-                additionalInfo += $"[Long-term Memory Index]\n{indexContent}\n";
+                additionalInfo += $"[Long-term Memory Index]\n{indexContent}\n\n";
             }
 
-            return additionalInfo;
+            // 新增：讀取當前 AI_Workspace 的檔案清單
+            if (!_hasWorkspaceExceededLimit)
+            {
+                string workspaceFiles = fileTools.ListFiles("");
+                if (!string.IsNullOrWhiteSpace(workspaceFiles) && !workspaceFiles.StartsWith("錯誤"))
+                {
+                    var fileLines = workspaceFiles.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (fileLines.Length <= 50)
+                    {
+                        additionalInfo += $"[Workspace Files]\n{workspaceFiles}\n\n";
+                    }
+                    else
+                    {
+                        _hasWorkspaceExceededLimit = true;
+                    }
+                }
+            }
+
+            // 新增：讀取非同步指派出去的任務訊息
+            var activeTasks = TaskOrchestrator.GetActiveTasks().ToList();
+            if (activeTasks.Any())
+            {
+                additionalInfo += "[Active Async Tasks (consult_expert)]\n";
+                foreach (var t in activeTasks)
+                {
+                    additionalInfo += $"- TaskId: {t.TaskId}, Assignee: {t.Assignee}, Status: {t.Status}, Request: {t.Request}\n";
+                }
+                additionalInfo += "\n";
+            }
+
+            return additionalInfo.TrimEnd() + "\n";
         }
 
 

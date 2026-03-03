@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Antigravity02.Tools
 {
@@ -57,6 +59,11 @@ namespace Antigravity02.Tools
         {
             _tasks.TryGetValue(id, out var task);
             return task;
+        }
+
+        public static IEnumerable<TaskItem> GetActiveTasks()
+        {
+            return _tasks.Values.Where(t => t.Status == TaskStatus.Pending || t.Status == TaskStatus.Running);
         }
     }
 }
