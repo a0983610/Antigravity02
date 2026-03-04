@@ -525,6 +525,119 @@ namespace Antigravity02.Tools
         }
 
         /// <summary>
+        /// 全局搜尋包含特定關鍵字的檔案
+        /// </summary>
+        public string SearchContent(string query, string subPath = "", string filePattern = "", int contextLines = 0)
+        {
+            try
+            {
+                // 自動移除 AI_Workspace 前綴 (若 AI 誤傳)
+                subPath = StripOutputFolderPrefix(subPath);
+
+                if (subPath.Contains("..")) return "錯誤：禁止存取上層目錄。";
+
+                string aiWorkspacePath = Path.GetFullPath(Path.Combine(_baseDirectory, _aiOutputFolder));
+                string targetPath = Path.GetFullPath(Path.Combine(aiWorkspacePath, subPath.TrimStart('/', '\\')));
+
+                // 安全檢查：確保目標路徑仍在 AI_Workspace 內
+                if (!IsPathAllowed(targetPath, aiWorkspacePath))
+                {
+                    return "錯誤：超出授權存取範圍。";
+                }
+
+                if (!Directory.Exists(targetPath))
+                {
+                    return $"錯誤：目錄 {subPath} 不存在。";
+                }
+
+                if (string.IsNullOrEmpty(filePattern)) filePattern = "*.*";
+
+                var files = Directory.EnumerateFiles(targetPath, filePattern, SearchOption.AllDirectories);
+                
+                string[] ignoredExtensions = { ".exe", ".dll", ".png", ".jpg", ".jpeg", ".gif", ".pdf", ".zip", ".tar", ".gz", ".pdb", ".bin", ".obj" };
+                
+                // Collect valid files and their LastWriteTime
+                var validFiles = new List<Tuple<string, DateTime>>();
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        var fi = new FileInfo(file);
+                        if (fi.Length > 10 * 1024 * 1024) continue; // 超過 10MB 跳過
+                        
+                        string ext = fi.Extension.ToLower();
+                        if (Array.IndexOf(ignoredExtensions, ext) >= 0) continue;
+
+                        validFiles.Add(new Tuple<string, DateTime>(file, fi.LastWriteTime));
+                    }
+                    catch { } // 忽略權限或讀取錯誤
+                }
+
+                // 優先考慮最近修改的檔案 (Descending order)
+                validFiles.Sort((a, b) => b.Item2.CompareTo(a.Item2));
+
+                StringBuilder sb = new StringBuilder();
+                int matchCount = 0;
+                bool limitReached = false;
+
+                foreach (var fileTuple in validFiles)
+                {
+                    if (limitReached) break;
+                    
+                    try
+                    {
+                        string filePath = fileTuple.Item1;
+                        string relativePath = filePath.Substring(aiWorkspacePath.Length).TrimStart(Path.DirectorySeparatorChar).Replace("\\", "/");
+                        string[] lines = File.ReadAllLines(filePath, Encoding.UTF8);
+
+                        for (int i = 0; i < lines.Length; i++)
+                        {
+                            if (lines[i].IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                if (matchCount == 0) sb.AppendLine($"搜尋結果 (關鍵字: {query})：\n");
+
+                                sb.AppendLine($"[{relativePath}][Line {i + 1}] {lines[i].Trim()}");
+                                
+                                // Handle context lines
+                                if (contextLines > 0)
+                                {
+                                    int start = Math.Max(0, i - contextLines);
+                                    int end = Math.Min(lines.Length - 1, i + contextLines);
+                                    for (int j = start; j <= end; j++)
+                                    {
+                                        if (j != i)
+                                        {
+                                            sb.AppendLine($"  {j + 1}: {lines[j].Trim()}");
+                                        }
+                                    }
+                                    sb.AppendLine("---");
+                                }
+
+                                matchCount++;
+                                if (matchCount >= 50)
+                                {
+                                    limitReached = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    catch { } // 讀取失敗則跳過
+                }
+
+                if (matchCount == 0) return "找不到符合的內容。(註：超過 10MB 的檔案以及常見的二進位格式將會被自動忽略)";
+                if (limitReached) sb.AppendLine("\n結果過多，請縮小關鍵字範圍。");
+
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                UsageLogger.LogError($"FileTools(SearchContent) Error: {ex.Message}");
+                return $"錯誤：搜尋失敗。{ex.Message}";
+            }
+        }
+
+        /// <summary>
         /// 寫入技能檔案，強制建立在 AI_Workspace/.agent/skills/{skillName}/SKILL.md
         /// </summary>
         public string WriteSkill(string skillName, string name, string description, string content)

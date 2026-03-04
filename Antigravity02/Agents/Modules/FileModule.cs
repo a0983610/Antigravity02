@@ -188,6 +188,23 @@ namespace Antigravity02.Agents
                     required = new string[] { }
                 }
             );
+
+            yield return client.CreateFunctionDeclaration(
+                "search_content",
+                "在 AI_Workspace 內全局搜尋包含指定關鍵字的檔案。回傳檔案路徑、行號及該行內容摘要。適用於定位配置、尋找錯誤日誌或檢索特定知識。注意：為確保效能，大於 10MB 的檔案及常見的二進位檔案格式 (如 .exe, .dll, .png, .zip 等) 將會被自動忽略。",
+                new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        query = new { type = "string", description = "要搜尋的關鍵字或字串" },
+                        path = new { type = "string", description = "指定搜尋的子目錄，預設為根目錄 (相對於 AI_Workspace)" },
+                        filePattern = new { type = "string", description = "限制搜尋的檔案類型（例如 *.log 或 *.cs）" },
+                        contextLines = new { type = "integer", description = "額外回傳目標行前後的行數（預設為 0）" }
+                    },
+                    required = new[] { "query" }
+                }
+            );
         }
 
         public override async Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui)
@@ -342,6 +359,16 @@ namespace Antigravity02.Agents
                         return "目前尚無知識索引 (00_INDEX.md)。";
                     }
                     return indexContent;
+
+                case "search_content":
+                    string errSearchCon = CheckRequiredArgs(funcName, args);
+                    if (errSearchCon != null) return errSearchCon;
+
+                    string sq = args["query"].ToString();
+                    string spath = args.ContainsKey("path") ? args["path"].ToString() : "";
+                    string sfPattern = args.ContainsKey("filePattern") ? args["filePattern"].ToString() : "";
+                    int ctxLines = args.ContainsKey("contextLines") ? Convert.ToInt32(args["contextLines"]) : 0;
+                    return _fileTools.SearchContent(sq, spath, sfPattern, ctxLines);
 
                 default:
                     return null;
