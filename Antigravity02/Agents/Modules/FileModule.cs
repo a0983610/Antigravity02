@@ -31,16 +31,15 @@ namespace Antigravity02.Agents
 
         protected override IEnumerable<object> BuildToolDeclarations(IAIClient client)
         {
-
             yield return client.CreateFunctionDeclaration(
                 "list_files",
-                "以樹狀結構列出 AI_Workspace 底下指定資料夾路徑下（最多 3 層）的所有檔案與子資料夾。預設可不填代表根目錄。",
-                new { type = "object", properties = new { path = new { type = "string", description = "相對於 AI_Workspace 的資料夾路徑 (例如 / 或 notes)" } } }
+                "【檔案系統：列出目錄與檔案】以樹狀結構列出指定路徑的內容。背後實作邏輯：路徑會被安全限制在 AI_Workspace 沙盒內；為確保效能，最多只會往下掃描 3 層子目錄。未提供 path 時預設為根目錄。",
+                new { type = "object", properties = new { path = new { type = "string", description = "相對於 AI_Workspace 的資料夾路徑 (例如 / 或 notes)，留空代表根目錄" } } }
             );
 
             yield return client.CreateFunctionDeclaration(
                 "read_file",
-                "讀取 AI_Workspace 下特定檔案的內容。支援一般文字格式 (如 .txt, .md, .csv, .json, .docx, .cs)，也可透過 isImage 參數讀取並解析圖片供視覺分析使用 (圖片模式無法與其他工具同時呼叫)。" + (_hasFastModel ? "若文字檔過大，可指定 summaryQuery 來擷取重點。" : ""),
+                "【檔案系統：讀取檔案或圖片】讀取文字檔內容或解析圖片。背後實作邏輯：1. 若讀取圖片 (isImage=true)，系統會在後端將檔案轉 Base64 並直接注入 AI 的視覺輸入，隨即中斷該次回應來迫使 AI 在下一回合「看」到圖片，這導致圖片讀取『不能』與其他工具同時呼叫。2. 讀取文字時回傳完整內容。" + (_hasFastModel ? "3. 若帶有 summaryQuery，系統將啟動快速模型 (Fast Model) 先行總結龐大內容，避免 Token 爆量。" : ""),
                 _hasFastModel
                     ? (object)new
                     {
@@ -48,8 +47,8 @@ namespace Antigravity02.Agents
                         properties = new
                         {
                             filePath = new { type = "string", description = "相對於 AI_Workspace 的檔案路徑" },
-                            summaryQuery = new { type = "string", description = "僅讀取符合此查詢的重點 (選填，使用快速模型處理)" },
-                            isImage = new { type = "boolean", description = "是否將此檔案作為圖片讀取與視覺解析 (若為 true，請單獨呼叫此工具)" }
+                            summaryQuery = new { type = "string", description = "僅讀取符合此查詢的重點 (將觸發後端快速模型處理)" },
+                            isImage = new { type = "boolean", description = "是否作為圖片視覺解析 (為 true 時必須單獨呼叫本工具，不可包含其他函數)" }
                         },
                         required = new[] { "filePath" }
                     }
@@ -59,7 +58,7 @@ namespace Antigravity02.Agents
                         properties = new
                         {
                             filePath = new { type = "string", description = "相對於 AI_Workspace 的檔案路徑" },
-                            isImage = new { type = "boolean", description = "是否將此檔案作為圖片讀取與視覺解析 (若為 true，請單獨呼叫此工具)" }
+                            isImage = new { type = "boolean", description = "是否作為圖片視覺解析 (為 true 時必須單獨呼叫本工具，不可包含其他函數)" }
                         },
                         required = new[] { "filePath" }
                     }
@@ -67,15 +66,15 @@ namespace Antigravity02.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "write_file",
-                "將資訊儲存為文字檔至 AI_Workspace。支援各種文字格式 (如 .txt, .md, .json, .cs 等)。預設會將內容附加到檔案末尾，若需覆蓋請設 append=false。",
+                "【檔案系統：寫入檔案】建立新檔案或覆寫、附加內容至既有檔案。背後實作邏輯：預設 append=true 會將內容接在檔尾，若要完全覆蓋必須明確設為 append=false。若指定的相對路徑中包含尚不存在的子資料夾，系統會自動遞迴建立這些資料夾。所有的操作都被安全鎖定在 AI_Workspace 內。",
                 new
                 {
                     type = "object",
                     properties = new
                     {
                         filePath = new { type = "string", description = "相對於 AI_Workspace 的檔案路徑 (例如 notes.txt)" },
-                        content = new { type = "string", description = "內容" },
-                        append = new { type = "boolean", description = "true=附加內容到最後 (預設); false=覆蓋所有內容" }
+                        content = new { type = "string", description = "要寫入的字串內容" },
+                        append = new { type = "boolean", description = "true=附加到檔尾(預設); false=清空並覆蓋檔案" }
                     },
                     required = new[] { "filePath", "content" }
                 }
@@ -83,7 +82,7 @@ namespace Antigravity02.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "delete_file",
-                "刪除 AI_Workspace 下指定的檔案。請謹慎使用。",
+                "【檔案系統：刪除檔案】從磁碟中永久刪除單一檔案。背後實作邏輯：僅允許刪除 AI_Workspace 內的單獨檔案物件，無法刪除資料夾。刪除後無法復原，呼叫前必須確認目標明確。",
                 new
                 {
                     type = "object",
@@ -97,14 +96,14 @@ namespace Antigravity02.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "move_file",
-                "在 AI_Workspace 內部搬移檔案或重新命名檔案。",
+                "【檔案系統：移動/重新命名檔案】變更單一檔案的路徑或名稱。背後實作邏輯：本質是 File.Move，會在 AI_Workspace 內將檔案從來源路徑搬移至目標路徑，若目標資料夾不存在會自動建立，若目標檔案已存在會將其覆寫。",
                 new
                 {
                     type = "object",
                     properties = new
                     {
-                        sourcePath = new { type = "string", description = "相對於 AI_Workspace 的來源檔案路徑 (例如 old_folder/notes.txt)" },
-                        destinationPath = new { type = "string", description = "相對於 AI_Workspace 的目標檔案路徑 (例如 new_folder/notes.txt)" }
+                        sourcePath = new { type = "string", description = "來源檔案路徑，相對於 AI_Workspace (例如 old/notes.txt)" },
+                        destinationPath = new { type = "string", description = "目標檔案路徑，相對於 AI_Workspace (例如 new/notes.txt)" }
                     },
                     required = new[] { "sourcePath", "destinationPath" }
                 }
@@ -112,67 +111,40 @@ namespace Antigravity02.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "update_file_line",
-                "修改 AI_Workspace 下文字檔中的特定行內容。行號從 1 開始。",
+                "【檔案系統：單行更新】精準修改文字檔裡面的特定一行。背後實作邏輯：這是一個輕量級的操作，後端會將檔案全部讀入記憶體，找到對應行號(1-based)替換內容，然後覆寫回檔案。適合用於微調單一設定或小區塊，避免重新傳輸完整檔案的 write_file 所耗費的資源。",
                 new
                 {
                     type = "object",
                     properties = new
                     {
                         filePath = new { type = "string", description = "相對於 AI_Workspace 的檔案路徑 (例如 notes.txt)" },
-                        lineNumber = new { type = "integer", description = "要修改的行號 (1-based)" },
-                        newContent = new { type = "string", description = "該行的新內容" }
+                        lineNumber = new { type = "integer", description = "欲修改的絕對行號 (從 1 開始)" },
+                        newContent = new { type = "string", description = "用來替換此行的全新內容字串" }
                     },
                     required = new[] { "filePath", "lineNumber", "newContent" }
                 }
             );
 
             yield return client.CreateFunctionDeclaration(
+                "search_content",
+                "【檔案系統：內容全局搜尋】在所有文字檔案中全文檢索特定字串。背後實作邏輯：系統會掃描並列舉 path 限制下的所有檔案，為求效能過濾掉大於 10MB 的檔案以及常見的二進位檔案格式 (例如 .exe, .png, .zip)，進以快速找出匹配 query 的文本行與詳細行號；可帶入 contextLines 同時查看上下行文脈。",
+                new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        query = new { type = "string", description = "要搜尋的精確關鍵字或字串" },
+                        path = new { type = "string", description = "搜尋範圍的子目錄，相對於 AI_Workspace (預設為空字串，代表全局搜索)" },
+                        filePattern = new { type = "string", description = "限制檔案類型，例如 *.cs 或 *.log" },
+                        contextLines = new { type = "integer", description = "除了找到的那行外，額外回傳它的上下行數量 (預設為 0)" }
+                    },
+                    required = new[] { "query" }
+                }
+            );
+
+            yield return client.CreateFunctionDeclaration(
                 "read_skills",
-                "讀取 AI_Workspace/.agent/skills 路徑下所有子資料夾內的 SKILL.md，擷取 name 與 description，並以 JSON 結構回傳。",
-                new
-                {
-                    type = "object",
-                    properties = new { }, // 不再需要外部傳入 subPath
-                    required = new string[] { }
-                }
-            );
-
-            yield return client.CreateFunctionDeclaration(
-                "write_skill",
-                "建立一個新的技能，或者覆蓋已存在的同名技能。會自動在 AI_Workspace/.agent/skills 底下建立以 skillName 為名的資料夾，並寫入/覆蓋 SKILL.md 檔案（包含標準格式）。",
-                new
-                {
-                    type = "object",
-                    properties = new
-                    {
-                        skillName = new { type = "string", description = "技能的資料夾名稱 (例如 text-analyser)" },
-                        name = new { type = "string", description = "技能的顯示名稱 (YAML frontmatter 中的 name)" },
-                        description = new { type = "string", description = "技能的功能描述 (YAML frontmatter 中的 description)" },
-                        content = new { type = "string", description = "技能的詳細 Markdown 內容說明" }
-                    },
-                    required = new[] { "skillName", "name", "description", "content" }
-                }
-            );
-
-            yield return client.CreateFunctionDeclaration(
-                "write_note",
-                "當 AI 判斷有值得長期保留的知識時呼叫。可自由規劃子目錄 (如 category/note.md) 建立樹狀結構。強制存入 AI_Workspace/.agent/knowledge/，並自動維護 00_INDEX.md 索引。",
-                new
-                {
-                    type = "object",
-                    properties = new
-                    {
-                        title = new { type = "string", description = "筆記的路徑與檔名 (例如 AI_Rules.md 或 frontend/React_Hooks.md)" },
-                        description = new { type = "string", description = "筆記的摘要或關鍵字" },
-                        content = new { type = "string", description = "詳細筆記內容" }
-                    },
-                    required = new[] { "title", "description", "content" }
-                }
-            );
-
-            yield return client.CreateFunctionDeclaration(
-                "search_knowledge_index",
-                "直接讀取並回傳 AI_Workspace/.agent/knowledge/00_INDEX.md 的內容，以檢索現有的知識筆記索引。",
+                "【技能管理：讀取技能清單】列出當前系統安裝的所有可用技能庫。背後實作邏輯：無須外界給定路徑，後台會寫死掃描 AI_Workspace/.agent/skills/ 目錄下各個技能資料夾中的 SKILL.md，重點回傳其結構化的名稱與功能描述。供 AI 檢視有哪些技能工具。",
                 new
                 {
                     type = "object",
@@ -182,19 +154,46 @@ namespace Antigravity02.Agents
             );
 
             yield return client.CreateFunctionDeclaration(
-                "search_content",
-                "在 AI_Workspace 內全局搜尋包含指定關鍵字的檔案。回傳檔案路徑、行號及該行內容摘要。適用於定位配置、尋找錯誤日誌或檢索特定知識。注意：為確保效能，大於 10MB 的檔案及常見的二進位檔案格式 (如 .exe, .dll, .png, .zip 等) 將會被自動忽略。",
+                "write_skill",
+                "【技能管理：新增/覆寫技能】建立 AI 專用的技能工作流擴充。背後實作邏輯：它會自動處理新建技能目錄，在 .agent/skills/{skillName}/ 之下建立或覆寫 SKILL.md，並按照系統要求的 YAML frontmatter 標準將 name 與 description 封裝寫入。適合將複雜的命令流程封裝為未來的標準 SOP。",
                 new
                 {
                     type = "object",
                     properties = new
                     {
-                        query = new { type = "string", description = "要搜尋的關鍵字或字串" },
-                        path = new { type = "string", description = "指定搜尋的子目錄，預設為根目錄 (相對於 AI_Workspace)" },
-                        filePattern = new { type = "string", description = "限制搜尋的檔案類型（例如 *.log 或 *.cs）" },
-                        contextLines = new { type = "integer", description = "額外回傳目標行前後的行數（預設為 0）" }
+                        skillName = new { type = "string", description = "技能所在的資料夾簡稱，限英數與破折號 (例如 build-tool)" },
+                        name = new { type = "string", description = "技能的顯示名稱 (在 YAML frontmatter 中)" },
+                        description = new { type = "string", description = "一句話簡述該技能的觸發時機或作用 (在 YAML frontmatter 中)" },
+                        content = new { type = "string", description = "此技能具體的 Markdown 循序執行步驟與指令細節內容" }
                     },
-                    required = new[] { "query" }
+                    required = new[] { "skillName", "name", "description", "content" }
+                }
+            );
+
+            yield return client.CreateFunctionDeclaration(
+                "write_note",
+                "【知識庫：寫入筆記】封存值得長期記憶的重要知識。背後實作邏輯：為了免除 AI 額外的建檔整理負擔，呼叫此工具後系統會強制把筆記存入 .agent/knowledge/ 目錄中，如果包含子路徑會自動遞迴建立資料夾；最方便的是，後端會『自動解析並增改』00_INDEX.md，這意味著只需要呼叫 write_note 就能全自動維護檢索索引庫，節省步驟。",
+                new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        title = new { type = "string", description = "筆記相對檔名或路徑 (例如 React_Best_Practices.md 或 subfolder/note.md)" },
+                        description = new { type = "string", description = "簡短的內容實意摘要，這會被系統自動寫入 00_INDEX.md 中" },
+                        content = new { type = "string", description = "知識筆記的完整文字內容" }
+                    },
+                    required = new[] { "title", "description", "content" }
+                }
+            );
+
+            yield return client.CreateFunctionDeclaration(
+                "search_knowledge_index",
+                "【知識庫：檢索索引】快速查閱長期記憶庫的「總目錄」。背後實作邏輯：無須任何參數，後端直接讀取 .agent/knowledge/00_INDEX.md。這是一份由 write_note 自動生成的 Markdown 表格，協助 AI 在開始全新任務前能最快得知此前是否有留下共用的模組或踩坑經驗。",
+                new
+                {
+                    type = "object",
+                    properties = new { },
+                    required = new string[] { }
                 }
             );
         }
