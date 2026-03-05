@@ -16,6 +16,65 @@ namespace Antigravity02.Tools
         private static readonly Dictionary<string, bool> _mockMessageShown = new Dictionary<string, bool>();
 
         /// <summary>
+        /// 是否要將真實的 API 回應記錄到 MockData 資料夾中
+        /// </summary>
+        public static bool IsRecordingMockData { get; set; } = false;
+
+        /// <summary>
+        /// 記錄真實的 API 回應至 MockData 資料夾，流水號自動遞增
+        /// </summary>
+        public static void RecordMockResponse(string providerName, string rawJson)
+        {
+            if (!IsRecordingMockData) return;
+
+            string normalizedName = providerName.ToLower();
+            string basePath = Environment.CurrentDirectory;
+            string mockDataDir = Path.Combine(basePath, "MockData");
+
+            if (!Directory.Exists(mockDataDir))
+            {
+                Directory.CreateDirectory(mockDataDir);
+            }
+
+            int nextSequenceNumber = 1;
+            
+            // 尋找現有的檔案以決定下一個流水號
+            string searchPattern = $"{normalizedName}_mock_response_*.json";
+            string[] existingFiles = Directory.GetFiles(mockDataDir, searchPattern);
+            
+            foreach (string file in existingFiles)
+            {
+                string fileName = Path.GetFileNameWithoutExtension(file);
+                // 預期檔案名稱格式為 {normalizedName}_mock_response_{counter:D4}
+                string prefix = $"{normalizedName}_mock_response_";
+                if (fileName.StartsWith(prefix) && int.TryParse(fileName.Substring(prefix.Length), out int num))
+                {
+                    if (num >= nextSequenceNumber)
+                    {
+                        nextSequenceNumber = num + 1;
+                    }
+                }
+            }
+
+            string targetFileName = $"{normalizedName}_mock_response_{nextSequenceNumber:D4}.json";
+            string targetPath = Path.Combine(mockDataDir, targetFileName);
+
+            try
+            {
+                File.WriteAllText(targetPath, rawJson, Encoding.UTF8);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"\n[System] 已成功記錄 {providerName} API 回應至 {targetPath}");
+                Console.ResetColor();
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"\n[System] 寫入 MockData 失敗: {ex.Message}");
+                Console.ResetColor();
+            }
+        }
+
+        /// <summary>
         /// 取得指定 provider 的模擬回應資料。
         /// providerName 會被正規化為小寫，以確保檔案命名一致（例如 "gemini_mock_response_0001.json"）。
         /// </summary>

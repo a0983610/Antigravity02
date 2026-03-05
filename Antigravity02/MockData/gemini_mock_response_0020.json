@@ -1,0 +1,43 @@
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`consult_expert` 成功發起非同步諮詢，並回傳了 `taskId`。現在，我將使用 `list_experts` 來確認 \"test_expert\" 是否已建立。"
+          },
+          {
+            "functionCall": {
+              "name": "list_experts",
+              "args": {}
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 5973,
+    "candidatesTokenCount": 53,
+    "totalTokenCount": 6026,
+    "cachedContentTokenCount": 2702,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 5973
+      }
+    ],
+    "cacheTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2702
+      }
+    ]
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "Fz6paaqfMoam1e8Pp5_rqAQ"
+}

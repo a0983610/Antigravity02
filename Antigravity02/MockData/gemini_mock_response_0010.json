@@ -1,15 +1,45 @@
-{
-    "candidates": [
-        {
-            "content": {
-                "parts": [
-                    {
-                        "text": "FileModule 所有功能 (update_file_line, delete_file, write_skill, read_skills) 皆已透過 MockData 自動測試完畢！"
-                    }
-                ],
-                "role": "model"
-            },
-            "finishReason": "STOP"
-        }
-    ]
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`delete_file` 成功刪除檔案，檔案系統工具測試完成。接下來，我將使用 `read_skills` 測試技能管理工具。",
+            "thoughtSignature": "CpgCAb4+9vvwK2kVIFtbrP1COz6ZJPXUiT+eEbBgc42p8viJpLVuNBxmWIzYvVuwCk/+3TVn8l2Wp5IuMus0f52ZnOzKi2dMm3ZBR2B2meBGPl5Fv8nwkmmtntXDCHagag/H4n+i9re/uu6y4kSfZl0t9efQeTuW5AGJic0JYePkbcHvT5n2tdO90gCSeEi1rqL8ugitx1GsLTV8ZlOgbJScFc2QXWTaUGWBE/U4OUVrKPZU72bUuvtCyMt1SHXPGrApGRwDSbUzE5kReyE3rFjN0Nv4reksUqvT7Kr2TPCI0LUINU3AoKAS3w3JnpiC0+QKRy5GH5yDlZyT/Lc3LqSHk4k0Wi45v8+bQw6p1F907ziOzAut1mmh2A=="
+          },
+          {
+            "functionCall": {
+              "name": "read_skills",
+              "args": {}
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 4612,
+    "candidatesTokenCount": 43,
+    "totalTokenCount": 4720,
+    "cachedContentTokenCount": 3978,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 4612
+      }
+    ],
+    "cacheTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 3978
+      }
+    ],
+    "thoughtsTokenCount": 65
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "6j2paYLoJ5-a1e8Pzr7eiAQ"
 }

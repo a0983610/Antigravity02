@@ -1,0 +1,31 @@
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "你好！我是 test_expert，一個專門設計來測試、驗證並展示 AI 工具鏈功能的 AI 助理。\n\n我的核心任務是：\n1.  **理解** 你提供的每一項工具（Function Calling）的功能、參數與限制。\n2.  **執行** 你給定的測試情境，呼叫對應的工具來完成任務。\n3.  **分析** 工具回傳的結果，判斷是否符合預期。\n4.  **回報** 整個測試過程的觀察與結論。\n\n我已經載入了所有可用的工具，並已準備就緒。\n\n**是的，我準備好了。**\n\n請告訴我第一個測試任務是什麼？我們可以從簡單的檔案操作開始，或是直接挑戰一個需要多步驟組合的複雜情境。",
+            "thoughtSignature": "CqAcAb4+9vtJ8qz2tgyJFUGWR14b+TbTMyeOov5BUdcT6uLSWsauDrGXTbI2mpH/mlgWW+RLmTgFPDOlP7gdGGai1PyY4BQGlM+IQBpQDSglm0sl5CzraG66wivqCTzHkN0CRoD9f/kpxEljdw4rlt4/9SvJZkUhfEEkG9p4K5v8pDpdSXPOPWgaKdyq53p1Dcb3i/PczKt6klumfomF2ntLAcZKoNBD3TK2gKwvjwHwcrdCqUqbnzpwk6p70E3E/j6/TtMQNcWqXswtoiLM7aVIkLHT/4npQFqTSuh/DHfE2g4vCZj83KWsawjb64scyGwtNm9eM1lSXLS80gxdHIyy6hDcufAA75JkezOlvXDiuwqy1eTLwdiT7a6/gtehC20WRlsSqmrtdLz9u0WLZPy6fjI552baTkJH7AwBqZzgt3jfpjm3A9ihuAfVUra+ZwsuzD5Zt2BNM5IFFXzQSOz1GSLq5uCQNrOt+haV8GUzlSvYA4JSINaKGx2gVvzJ8ua2xKwY+f4uQI69lBZ6+fLsmaGCGFLkbnmRMt1rquTNRT81DM6Zzx68FHHzgWmIQoCokdyCPp4XNmS7nUnWsWS21APfxv9IX0aSGI8IaXufhk0681wsmZaHc4Ezetbu8wsEhthi3B5MAwGraWHgYafL46xbQl1hf2oGBbwV33v8lsG4UezFmAn06HZp8fMpIvj+SB/ortnOmfmrBEF9rAabwlOHqbV1j3NVqUy31QYXiFV5DdD/NS9dLkU3Jbx5s+F/cfXpRFyZ0BXI+uB0hxa510isrhLpZk4oItQPIU9XWLd5Q44GU1N89YDem/En7UU0TMu1riO+oNOtTzLccCtGrdemZCRP1ugFH0W88Ud0rtpOzKH6IZjaL/jX2Mcxl+/0svOajjat+hilY8aAfdwY4CYYUMxXCMxVSQ6X9EmObPWFRjaQlG9KgDxGZzE+WcuWyr8TKhXftQfXCSUw6ltFBiXJ/hpRG1K7u5L8lOMeAFoMNVpmM/z+Tm+jayiMoxEtW7f86+MqkEw9q7Zp/NlcxuQOkaLxFAAuoLHiEQD/QJmsQJDX7MryDZWXPM42wY6q06bPgnrKGqonuaCUVyv2kBSK2mvW+1j1U9lrJ88zCYz9Z5DyCH2xMbLaNchYqsA6RceJPfD5UQngqJsJvC+/RvLTJTWKC3LOmu1s2xe4JrhISlu8RoZDwKrv9xnyjwfXa7z1V5ex7WfPbrlNd1Wxe+bJQlkSKeER1369+VAcSpe7TG8aupVskNvJ4AXkxpRva/X4PqwwkcqOe1iKrePjgJ5N8ajp8gOj/iILmJegg19Hr1VRjzFhkInMUoiGs6Y3WhyL4UsxUEbqEUmcNt2IwN+jr9Ng4y9s+AySJA9yqeyfdRkjj+LQcxsIrr8eo8+flQNVRtOzeq2rw2UdzZgNYlU9gGo/Hq/rdL8y/FT+RPMq1h/txqTW5UH++6pq6pLjlvWJOBlAHa4VTR/FEcqwxIEfmYYufO3rfA1U1/uQmA263cgnI7qvWS9dospmbZv8O2FbzDuRvZAV1RDzqopW6aTcMS2/yOC17TOUUNMjO8fhGUQR407CIEvYJKj2lO5XkndvKQm7rZFBQu6TSWmTgKPze9QzJNswjr3350uh71kJMiyEMxyWGPFR+qqK+bqAYaMFudevRFMAiaP7tJOLHz2Q8htk4JD+VBLMDdUa8TFaU4H0CIdI9L6D0mZLC2IsnizYLohA1vZmWx52OW2aMGUwaPPunLvjKtoK7foJcLjTww4nufQoG3IOp5onkPFsLmMBtfEn0/aH3rnJWP69a9J7XlNJ9Yx7v1PlSErRMOlvOkXxUd889nyaRHRdHLQagYROZqiAUgyOWjYZtOJy9XKkjctf4NHheMcsNddVNIfH3737CUJvEulLZN4gnvmfT38euDEKlQclhj0vLWvJX6BvikD1pUYKZsJ0XIHTEptABXU47re/t4EzrRVmRjEP76F3Y3LMp55snT85wb0KDyfeIZJmXmPSO407zyM/x06GN+WRDXnzcxeRy9x2EtoLPa13pmMJvKHbD8HCiEq6HzGY6vcHC270u5TKpQazj3RhrJjWE2+J9qg6Y2jLrplyZlVxxk+9z7juz4Akjf0nokL+nNjzmz/5RXjA++M/y+KYmC+MwZc3+3rRTzjlHAwWwGFDKo95QxLAHRAFKZQExsLYRmaE5g4G0KwpH8Zrd5+NNrqjpQRkTai4B2LhVMoigm2HdYowkoiypcGJXXqhnTXQJrBze8wY0n2xkmdMBuNc0yznrBrIwpOdcaTGqNIBb7o3oDS3HYz+jyglbB6ba6bYP1zabDqJeDx5gB03QNGYVmkzHRL9vBiQ3pi41VejZgpUS2eGq18NLtA/JL4lbOqBgVnFBWTKquGiOyIUzdEZhsg3bhpoFvVKiJ/AWGsLXxwEQTLqtS0RLpeI26ZLxhdFEvWYW3EmWkXtr3Rw5oNljCq74bG74FDiJkNRf1JY0FwcjFX/A8fVSD1EFj9IRwwFhDGygba7SOajFb5RD4vXXjp4+4VXS/iuu5ReoPM+khdElLITIBtFztndnbiATBh88DrKudqJVYwb5UREmQhrnCI/EiFXh4e+BoIEFQ8v3r8Y8fqV7LrEJ0RubaDqWRez88Pi4i30TpO6XF3u12GoyTSgCxdjUFB7E9wdVfGO4i+PRNSdxgE6AJiEmdXIdjPJJryRyz7LNaDanxT8H5H5umPBfZBVZPDP4e6UwPV/EYT/pIxpdUxM/FJjH56onjeA+eN4gnX+rrcdp5YjZ3PFenZHpEjWCbHv3/bmOyRM4GcUBKiMBp5Y1mJPy7swygCTWIrJGLCw6qqrHvMPv9oOMnBU/7caRw2HZqh8ycNhle/Lq+M82B+xxCaUmGrODxy5miop0n6w7VbX368NqZsBMaWLhxgST1X1yrq6Z3X3AuZrY53dqi9jvZmoFjrGvk6fS1soWyP+849ga4HD2CRLS6U/CERkzgwXVN4McW/yKNgiw6TYbGh2cHYSMFARLl8UzH+XYiUU4FLe1/5jPhHQLvCeU1CAyKy0NxQA/ByUD9vCc0rwhrXFiOFwKChu6P3qHKpnd1QDE4tGIKpb0M0fU5Bps83zf6bKZIXzLhnBYrH6/Av2GJoM2hHgjyVHeAsHZZaWTKPb2WNqcwrx3ylXFhSll93zIzXn3tERcbqepg9tDpSW7LYuaDT5CvxcNjgahF+hyI6lqFkGaMnQVOJCih62HDm17TySz1kbXT09vPSn0jPXCIO80WJ28j6o5CKHUvI5pJU0aEK7MnR1W7uHJY0mPEc5VELbexf7LOMMpvW65A5gakhakLTTi6QCbb+tD2J4g6AizTpq0WY6d1vqY+vQgGHv54V2I//CMCNPhrsmYhvZOvyAh4+N89FhqvgZaf+IMkfv/2gahJBufegvndTDpzzf1Le2Qx3USPH2ML0xhKgoizjkGLKAa/TZ/n6sdGIlWruvkSvmgAb2TaZVIpfYJ5OT7flWXwaotKuChiBJURmqk9RUruOkaBIVw/Q5KaTECy4GsG5yd44gO0hfTfzzilbXC3Tb6fQyb+pP6PwQbMM6pHptyunFx8B9yTgJwtWUlqWAodcFUxX06KCuXjEGp+b0sMUU7fsF8oqxosSvY9Kt/0QBMhwCLnYQcw8QQqI+1BV0GDbIZ8FhpmfsifKsp8vgCx5DjiV2Rp5PndAynJ1Ws3VTT/XBpNahmZYEdLnORrYJXl9PuSKQDbmOopRGxaBf61wcdj0Zf419DW2abnJVW11vxCKzkNJPx5SNHuj29ND75nSRA/McdLwrHH2PcqboapXsapmx2VV2yULQq/gNOuUsMHMYATTIwysfGeOCiKH/EYjbrboO75e7aN4jcaeM9zPEdZsKm4Co+Rigvort8j2Pp8GAR8Jneufg9hes0DK0L3n0eCprxMyHZZbuaCQy5gvJo8dTQCXA6CZJqYxQbY2s4zC6FyFfPynrSOan7JPqw0MDTLuxG5zORPeLcwC+zJs8KnHuqC00kEAQdycaWRpr+w/wmIXxXrJRgUhQTRRV+WIcQKs+vYwXRVdA8MvmuYQnfJe3BHzyV/+2GoQ63aFnyd0V956CZ31gifWMjxaDk8tq91ys3NgLoVxvp05meX14oFi39apmxRNyMHVlKPCCbMlWP0EnopowVoO/RkPJ987Yg8kK0SnRRIV4s+uUHIZ1mVZQHAkUrQvQ7YXzZdDQ84L1gSROdnDG8p5R2x22Uo+C/1QJEzUgtIqftwPnDh5FdmAh2zr5Lx/OgOIDBxCjDx/8hya/95ydrWMNW/DFyizaY5XD0/9GUNqv5gGEFSmsS7RvS5nzfelFb7wGF9d5kd7EHqVi1gRpbEhy39rV2tVO9TYrWFfrMOjU5x6f8Hu24J0fPFS8nRi0Lxx7z04/aej7LFymsRLScQ7syLMDQx0cHnvQdyHPQpq8TQ+dM2qQx9bzF9EV/puTjV15Lu9DQvlgAp7fQdeqyD9y3yunVFDAEumCLTRSu16Kjl1EmFxfUR1/bvgVqFQjUk0je/NkfP8ZVO0ojrJlqbjttVh8+ObDoHxA+uamxTRHPE5uYxi9aLfkmx6OjCSrA4SrIipSPBMReskcagbeB4Lmp5UHbSzkm/Oak4U5uT1CsaRJheFvZ/6DlYT49RNN6tYROqc1lPbzTRxPrHuC86maaBz+41ZWVYzTGry0g9mI35+xpSg9BYXI0ud5UXdAbSWm2bM4VtTap2NMUSpo3HQkzIHXNieM8CzgL5rFMkDoLMtEEoAPd/Lnas7hj/9CaAp1B+L+X8Tpd36waA=="
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 2065,
+    "candidatesTokenCount": 170,
+    "totalTokenCount": 3050,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2065
+      }
+    ],
+    "thoughtsTokenCount": 815
+  },
+  "modelVersion": "gemini-2.5-pro",
+  "responseId": "KT6paf_MB96m1e8PwMqnkAQ"
+}

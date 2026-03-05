@@ -1,0 +1,50 @@
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "好的，感謝您的提醒！我確實遺漏了專家諮詢工具的測試。\n\n現在我將繼續完成測試，包括：\n*   `consult_expert`：建立一個新的專家並提問。\n*   `list_experts`：列出所有活躍的專家。\n*   `check_task_status`：檢查非同步任務的狀態。\n*   `dismiss_expert`：結束專家 session。\n\n我會先用 `consult_expert` 建立一個名為 \"test_expert\" 的專家，並設定為非同步諮詢。",
+            "thoughtSignature": "Cu4FAb4+9vvhtery2zj1iaWuHNzdBUK2/l8+LeHMGY394awCJf0yt6WZIP3WRywYZQCZhRPdSNxw7N05LwQsAB9hW5Ievy3Qw9xChHSYGhrcKMtjw9gHAFv5/Jwup9V/ItfLevj3vv5axPhL6A64czWkJdCI4EEMyitXIHmBHgWi+cA5aKyCo8Omjx0ug5VOtINE3gBWjYtAOXmeC6jWKBzrv6TZEypWaG4mrSq95ZQSXYeEy18LfCtDiMe6uabBaRyVIi5Jiy2kHYQl+41Vm7oqTQR9pm/LiPcO55AHEJ37IJgFrQU8EcV8puB4YxbHnGpZ4QrsGruCxdWQeYfwvway+IbZ/lP0exp5da4zHKSNJbE+a2MWXHn6xUXTdtdCKm+YoaV1wXL1YbUOFVkjQEOySkb6fXDL9nHSkKJbWeDjzfe37m1bnjzQGyjTOQ5fF5yKnYR2pD/pQruUZhGqwUBy8G5UjAay0O020Zm3GeetdVwUwO9V0mcWeuiONwpeNii1yZtb7UwgpQ+VvioqdC+mG0oEIqtolMgars4DlJp3Q28TWhTz+6YiM39LzhKcXJkQCVbNflFHW1XWLHo+HPwESrsPx0jWWzN6G7u39LHCEzUYqUr9K9a+kaa9/ZWz0xBLHKfEp8SS83IoZ82FLGCyvEjr3canya1/oor7OQo+EYgfz8qiV7V7COI1coiumh75RUF1BLXOb40ndQfnBTZGTHUr6PZ4o+N0P3/1++kjGs1zDt9T8QdoHVdMXIPXFMl/RJxUA2QT3bv2wO7BGjyX8gWmMOHU9SEyegx2KqiF79y0LE5iTTyKv/uENxfaQNMBvCgu2wiw5sar46gEU2Ckhho5KPCLOBSaRdmBr/TguqiF/EDnyQwmYoVNd+/Mauo/e4Qw6oouVhodPWevNMl/AkxtMvfrjtpYA9im78D7m9OXycXlE60H7CchsDYMO2sEi31NYtSL2KHmwtBIxYlo8J46TePwIUQBkX9DlKkn"
+          },
+          {
+            "functionCall": {
+              "name": "consult_expert",
+              "args": {
+                "role": "你是一個專門測試各種 AI 工具功能的專家。",
+                "is_async": true,
+                "expert_name": "test_expert",
+                "question": "嗨，test_expert，你能自我介紹一下嗎？"
+              }
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 6137,
+    "candidatesTokenCount": 179,
+    "totalTokenCount": 6511,
+    "cachedContentTokenCount": 2801,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 6137
+      }
+    ],
+    "cacheTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2801
+      }
+    ],
+    "thoughtsTokenCount": 195
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "FT6pabWXA7-d1e8P2rmd-Q0"
+}

@@ -1,0 +1,44 @@
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`dismiss_expert` 成功結束了 `test_expert` 的 session。我將再次使用 `list_experts` 來確認。"
+          },
+          {
+            "functionCall": {
+              "name": "list_experts",
+              "args": {}
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 7159,
+    "candidatesTokenCount": 39,
+    "totalTokenCount": 7514,
+    "cachedContentTokenCount": 6376,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 7159
+      }
+    ],
+    "cacheTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 6376
+      }
+    ],
+    "thoughtsTokenCount": 316
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "LT6pabehL4uO9tMPhdGd2QY"
+}

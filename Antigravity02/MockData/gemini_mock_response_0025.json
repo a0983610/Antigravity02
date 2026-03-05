@@ -1,0 +1,46 @@
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "非同步任務已完成，並成功回傳了 `test_expert` 的自我介紹。這證明 `check_task_status` 也能正常檢索已完成的非同步任務結果。\n\n最後，我將使用 `dismiss_expert` 結束 `test_expert` 的 session。"
+          },
+          {
+            "functionCall": {
+              "name": "dismiss_expert",
+              "args": {
+                "expert_name": "test_expert"
+              }
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 7044,
+    "candidatesTokenCount": 82,
+    "totalTokenCount": 7181,
+    "cachedContentTokenCount": 2732,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 7044
+      }
+    ],
+    "cacheTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 2732
+      }
+    ],
+    "thoughtsTokenCount": 55
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "Kz6pacHzCbmR9tMPnce6oAc"
+}

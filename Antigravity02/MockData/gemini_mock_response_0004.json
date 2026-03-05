@@ -1,15 +1,42 @@
-{
-    "candidates": [
-        {
-            "content": {
-                "parts": [
-                    {
-                        "text": "我都處理好了！我已經讀取了資料夾清單，寫入了 `AI_Workspace/test_mock.txt` 檔案，並且成功把它讀出來了。"
-                    }
-                ],
-                "role": "model"
-            },
-            "finishReason": "STOP"
-        }
-    ]
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`read_file` 正常。接下來，我要用 `update_file_line` 修改 `test_file.txt` 的第一行。",
+            "thoughtSignature": "CrgBAb4+9vsH1SfBMhUKU3SmuJiZTZ91XMOGB9DQDMI8MObIu/RB6jvfKAig5uzCsHx83eEvG1NiL5BDbtcoE1MMzaaWFgaTr5UvQrdpgxoNhSwpcV5ZgrsYJmeys+vnyj+WgxYdLtIs+ltVY0hWa60JoUlzHQ26l2TpkAixfnwR/LmDq+Xgrb9X1IiY9IaksmExicfFZy9d/o1j3twafzYv2/I2PZsIrxjwdu7Ezu3Zjj/Ofhw+Wk3K/Q=="
+          },
+          {
+            "functionCall": {
+              "name": "update_file_line",
+              "args": {
+                "lineNumber": 1,
+                "filePath": "test_file.txt",
+                "newContent": "Updated first line."
+              }
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 3832,
+    "candidatesTokenCount": 65,
+    "totalTokenCount": 3943,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 3832
+      }
+    ],
+    "thoughtsTokenCount": 46
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "4T2pae3ENJG0vr0Pr7-8qAw"
 }

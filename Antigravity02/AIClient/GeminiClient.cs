@@ -71,6 +71,11 @@ namespace Antigravity02.AIClient
 
                 if (response.IsSuccessStatusCode)
                 {
+                    if (MockDataManager.IsRecordingMockData)
+                    {
+                        string providerName = request.MockProviderName ?? "gemini";
+                        MockDataManager.RecordMockResponse(providerName, responseJson);
+                    }
                     break;
                 }
 

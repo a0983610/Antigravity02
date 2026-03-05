@@ -1,23 +1,40 @@
-{
-    "candidates": [
-        {
-            "content": {
-                "parts": [
-                    {
-                        "functionCall": {
-                            "name": "write_skill",
-                            "args": {
-                                "skillName": "mock-test-skill",
-                                "name": "Mock Test Skill",
-                                "description": "This is a mock skill for testing",
-                                "content": "Just a test content."
-                            }
-                        }
-                    }
-                ],
-                "role": "model"
-            },
-            "finishReason": "STOP"
-        }
-    ]
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`move_file` 正常，`test_file.txt` 已更名為 `renamed_file.txt`。現在我將再次列出檔案以驗證。",
+            "thoughtSignature": "CqcBAb4+9vsGU6/6+XbDrlO6yAeBQAY1yVV27E9TiIVjxapJTW5BOdfbDS+C5uFmDRXKWS+r0ODs/FU0m2Kp8dX6MYW3JWrt8OZRoqWh1rT+B6oGCfap6dPCvjXbVCLUL4Ku4loSpdLuKhVf/gajcwMPzDOZeFUdq6qdamc2GsMl4r4SXcRiNZFabHca4M/9+DQbGEm9wsbtfNW8DoA2whyihUU4WpK0Vuo="
+          },
+          {
+            "functionCall": {
+              "name": "list_files",
+              "args": {
+                "path": "/"
+              }
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 4225,
+    "candidatesTokenCount": 53,
+    "totalTokenCount": 4320,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 4225
+      }
+    ],
+    "thoughtsTokenCount": 42
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "5z2pabyeOsWb1e8Pxf6twQ0"
 }

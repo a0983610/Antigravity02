@@ -1,21 +1,45 @@
-{
-    "candidates": [
-        {
-            "content": {
-                "parts": [
-                    {
-                        "functionCall": {
-                            "name": "http_get",
-                            "args": {
-                                "url": "https://api.github.com/zen",
-                                "headers": "{\"User-Agent\": \"MockAgent\"}"
-                            }
-                        }
-                    }
-                ],
-                "role": "model"
-            },
-            "finishReason": "STOP"
-        }
-    ]
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`write_skill` 成功新增技能。現在，我會再次讀取技能清單以驗證。",
+            "thoughtSignature": "CpQBAb4+9vuN/g+yA1JZS36CJlSk1pE+RhDCvqGrYvK29XrXl6EfVnUqcUcKdWyu26QHFo1pgeASybk6HCbY3NddYv+/FKutngvc+zBKTZ0aoOPhNC6CvyRJIscRdga1AyandnfjqpxGWOK+lKeCRDqXgC49JDoKo1X8HrAHcgKkW4nZdvhYA4Xu91hrWPsV2CRU2tzSLQ=="
+          },
+          {
+            "functionCall": {
+              "name": "read_skills",
+              "args": {}
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 4810,
+    "candidatesTokenCount": 34,
+    "totalTokenCount": 4872,
+    "cachedContentTokenCount": 3145,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 4810
+      }
+    ],
+    "cacheTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 3145
+      }
+    ],
+    "thoughtsTokenCount": 28
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "7j2paa3RAsmO9tMPkq2jmA8"
 }

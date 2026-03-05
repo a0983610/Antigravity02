@@ -1,22 +1,41 @@
-{
-    "candidates": [
-        {
-            "content": {
-                "parts": [
-                    {
-                        "functionCall": {
-                            "name": "write_file",
-                            "args": {
-                                "filePath": "test_mock.txt",
-                                "content": "Hello! This is a mock API test text file.",
-                                "append": false
-                            }
-                        }
-                    }
-                ],
-                "role": "model"
-            },
-            "finishReason": "STOP"
-        }
-    ]
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`list_files` 運行正常。現在我將用 `write_file` 創建 `test_file.txt`。",
+            "thoughtSignature": "CqoBAb4+9vuHeZvzzLCxv5QTw5uODLCbQUmu8gMNbHkuDDms4IAUAVlV4sWzSaHxIU0FGMb5E440G+IkO7hhD6NHy3VrN82Lm+50Ry+TWm4+VNUOfKRGCOa5EVUPJU/u1ES771yZbXTfIcBuXkmeFAIZHiXhUiCiAKF260KWNlU/hO17oqnm8XhyI7c627Yg+quAF+GQ2QVGMvYqaDIJ7qDaQbxKNtDy1Kt+5kI="
+          },
+          {
+            "functionCall": {
+              "name": "write_file",
+              "args": {
+                "filePath": "test_file.txt",
+                "content": "This is the first line.\nThis is the second line."
+              }
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 3661,
+    "candidatesTokenCount": 63,
+    "totalTokenCount": 3761,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 3661
+      }
+    ],
+    "thoughtsTokenCount": 37
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "3z2pab7QA-mJosUPttnLCA"
 }

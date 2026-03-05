@@ -92,6 +92,16 @@ namespace Antigravity02
                 return true;
             }
 
+            if (cmd.Equals("/rmock", StringComparison.OrdinalIgnoreCase))
+            {
+                Antigravity02.Tools.MockDataManager.IsRecordingMockData = !Antigravity02.Tools.MockDataManager.IsRecordingMockData;
+                string status = Antigravity02.Tools.MockDataManager.IsRecordingMockData ? "ON" : "OFF";
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"[System] Record mock data is now {status}.");
+                Console.ResetColor();
+                return true;
+            }
+
             // 如果是 / 開頭但未知的指令，提示使用者
             Console.WriteLine($"[System] Unknown command: {cmd}. Type /help for list of commands.");
             return true;
@@ -105,6 +115,7 @@ namespace Antigravity02
             Console.WriteLine("  /save [path]  : Save chat history to file (default: chat_history.json)");
             Console.WriteLine("  /load [path]  : Load chat history from file (default: chat_history.json)");
             Console.WriteLine("  /time         : Toggle timestamp header for user messages");
+            Console.WriteLine("  /rmock        : Toggle recording of AI API responses to MockData folder");
             Console.WriteLine("  /help         : Show this help message");
             Console.WriteLine("  /exit         : Exit the program");
             Console.WriteLine("==========================\n");
