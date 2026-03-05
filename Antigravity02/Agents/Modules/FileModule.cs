@@ -203,164 +203,219 @@ namespace Antigravity02.Agents
             switch (funcName)
             {
                 case "list_files":
-                    string subPath = args.ContainsKey("path") ? args["path"].ToString() : "";
-                    return _fileTools.ListFiles(subPath);
+                    return HandleListFiles(args);
                 case "read_file":
-                    string errRead = CheckRequiredArgs(funcName, args);
-                    if (errRead != null) return errRead;
-
-                    bool isImage = args.ContainsKey("isImage") && Convert.ToBoolean(args["isImage"]);
-                    if (isImage)
-                    {
-                        string imgPath = args["filePath"].ToString();
-                        string aiWorkspacePath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AI_Workspace"));
-                        
-                        string cleanedPath = imgPath;
-                        string prefixSlash = "AI_Workspace/";
-                        string prefixBackslash = "AI_Workspace\\";
-                        if (cleanedPath.StartsWith(prefixSlash, StringComparison.OrdinalIgnoreCase))
-                            cleanedPath = cleanedPath.Substring(prefixSlash.Length);
-                        else if (cleanedPath.StartsWith(prefixBackslash, StringComparison.OrdinalIgnoreCase))
-                            cleanedPath = cleanedPath.Substring(prefixBackslash.Length);
-
-                        if (!File.Exists(cleanedPath))
-                        {
-                            string workspaceImgPath = Path.GetFullPath(Path.Combine(aiWorkspacePath, cleanedPath.TrimStart('/', '\\')));
-                            if (File.Exists(workspaceImgPath))
-                            {
-                                cleanedPath = workspaceImgPath;
-                            }
-                            else
-                            {
-                                return $"[Error] 找不到圖片檔案: {imgPath} (已嘗試絕對路徑與 AI_Workspace 相對路徑)";
-                            }
-                        }
-                        imgPath = cleanedPath;
-
-                        try
-                        {
-                            string ext = Path.GetExtension(imgPath).ToLower();
-                            string mime = "image/jpeg";
-                            if (ext == ".png") mime = "image/png";
-                            else if (ext == ".webp") mime = "image/webp";
-                            else if (ext == ".heic") mime = "image/heic";
-                            else if (ext == ".heif") mime = "image/heif";
-                            
-                            byte[] bytes = File.ReadAllBytes(imgPath);
-                            string base64 = Convert.ToBase64String(bytes);
-                            
-                            if (_agent != null)
-                            {
-                                if (!_agent.InjectImageHistory(imgPath, mime, base64))
-                                {
-                                    return "[Error] 讀取圖片 (isImage=true) 無法與其他工具同時呼叫，請單獨使用此工具來讀取圖片。";
-                                }
-                            }
-                            
-                            return "[SKIP_FUNCTION_RESPONSE]";
-                        }
-                        catch (Exception ex)
-                        {
-                            return $"[Error] 讀取圖片失敗: {ex.Message}";
-                        }
-                    }
-
-                    string fileContent = _fileTools.ReadFile(args["filePath"].ToString());
-                    string fileQuery = args.ContainsKey("summaryQuery") ? args["summaryQuery"].ToString() : null;
-
-                    if (_hasFastModel && !string.IsNullOrEmpty(fileQuery))
-                    {
-                        string summary = await SummarizeContentAsync(fileContent, fileQuery);
-                        if (summary.StartsWith("[Fast AI Error]"))
-                        {
-                            return summary + "\n\n[Warning: Summary failed, falling back to full content] 以下是原始檔案內容：\n" + fileContent;
-                        }
-                        return summary;
-                    }
-                    return fileContent;
+                    return await HandleReadFileAsync(funcName, args);
                 case "write_file":
-                    string errWrite = CheckRequiredArgs(funcName, args);
-                    if (errWrite != null) return errWrite;
-
-                    bool append = args.ContainsKey("append") ? Convert.ToBoolean(args["append"]) : true;
-                    return _fileTools.WriteFile(
-                        args["filePath"].ToString(),
-                        args["content"].ToString(),
-                        append);
+                    return HandleWriteFile(funcName, args);
                 case "delete_file":
-                    string errDel = CheckRequiredArgs(funcName, args);
-                    if (errDel != null) return errDel;
-
-                    return _fileTools.DeleteFile(args["filePath"].ToString());
+                    return HandleDeleteFile(funcName, args);
                 case "move_file":
-                    string errMove = CheckRequiredArgs(funcName, args);
-                    if (errMove != null) return errMove;
-
-                    return _fileTools.MoveFile(args["sourcePath"].ToString(), args["destinationPath"].ToString());
+                    return HandleMoveFile(funcName, args);
                 case "update_file_line":
-                    string errUpd = CheckRequiredArgs(funcName, args);
-                    if (errUpd != null) return errUpd;
-
-                    int lineNum = Convert.ToInt32(args["lineNumber"]);
-                    string newContent = args["newContent"].ToString();
-                    return _fileTools.UpdateFileLine(args["filePath"].ToString(), lineNum, newContent);
+                    return HandleUpdateFileLine(funcName, args);
                 case "read_skills":
-                    // 固定讀取 AI_Workspace/.agent/skills 目錄
-                    return _fileTools.ReadSkills(_fileTools.SkillsPath);
+                    return HandleReadSkills();
                 case "write_skill":
-                    string errWriteSk = CheckRequiredArgs(funcName, args);
-                    if (errWriteSk != null) return errWriteSk;
-
-                    string sName = args["skillName"].ToString();
-                    string name = args["name"].ToString();
-                    string desc = args["description"].ToString();
-                    string content = args["content"].ToString();
-                    return _fileTools.WriteSkill(sName, name, desc, content);
-
+                    return HandleWriteSkill(funcName, args);
                 case "write_note":
-                    string errWriteNote = CheckRequiredArgs(funcName, args);
-                    if (errWriteNote != null) return errWriteNote;
-
-                    string noteTitle = args["title"].ToString();
-                    if (!noteTitle.EndsWith(".md", StringComparison.OrdinalIgnoreCase) && !noteTitle.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
-                    {
-                        noteTitle += ".md";
-                    }
-                    string noteDesc = args["description"].ToString();
-                    string noteContent = args["content"].ToString();
-                    
-                    string knowledgePath = Path.Combine(".agent", "knowledge", noteTitle).Replace("\\", "/");
-                    string writeResult = _fileTools.WriteFile(knowledgePath, noteContent, false);
-                    if (writeResult.StartsWith("錯誤"))
-                    {
-                        return writeResult;
-                    }
-                    
-                    string updateIndexResult = UpdateKnowledgeIndex(noteTitle, noteDesc);
-                    return $"{writeResult}\n{updateIndexResult}";
-
+                    return HandleWriteNote(funcName, args);
                 case "search_knowledge_index":
-                    string indexPath = Path.Combine(".agent", "knowledge", "00_INDEX.md").Replace("\\", "/");
-                    string indexContent = _fileTools.ReadFile(indexPath);
-                    if (indexContent.StartsWith("錯誤：找不到檔案"))
-                    {
-                        return "目前尚無知識索引 (00_INDEX.md)。";
-                    }
-                    return indexContent;
-
+                    return HandleSearchKnowledgeIndex();
                 case "search_content":
-                    string errSearchCon = CheckRequiredArgs(funcName, args);
-                    if (errSearchCon != null) return errSearchCon;
-
-                    string sq = args["query"].ToString();
-                    string spath = args.ContainsKey("path") ? args["path"].ToString() : "";
-                    string sfPattern = args.ContainsKey("filePattern") ? args["filePattern"].ToString() : "";
-                    int ctxLines = args.ContainsKey("contextLines") ? Convert.ToInt32(args["contextLines"]) : 0;
-                    return _fileTools.SearchContent(sq, spath, sfPattern, ctxLines);
-
+                    return HandleSearchContent(funcName, args);
                 default:
                     return null;
             }
+        }
+
+        private string HandleListFiles(Dictionary<string, object> args)
+        {
+            string subPath = args.ContainsKey("path") ? args["path"].ToString() : "";
+            return _fileTools.ListFiles(subPath);
+        }
+
+        private async Task<string> HandleReadFileAsync(string funcName, Dictionary<string, object> args)
+        {
+            string errRead = CheckRequiredArgs(funcName, args);
+            if (errRead != null) return errRead;
+
+            bool isImage = args.ContainsKey("isImage") && Convert.ToBoolean(args["isImage"]);
+            if (isImage)
+            {
+                return HandleReadImage(args);
+            }
+
+            string fileContent = _fileTools.ReadFile(args["filePath"].ToString());
+            string fileQuery = args.ContainsKey("summaryQuery") ? args["summaryQuery"].ToString() : null;
+
+            if (_hasFastModel && !string.IsNullOrEmpty(fileQuery))
+            {
+                string summary = await SummarizeContentAsync(fileContent, fileQuery);
+                if (summary.StartsWith("[Fast AI Error]"))
+                {
+                    return summary + "\n\n[Warning: Summary failed, falling back to full content] 以下是原始檔案內容：\n" + fileContent;
+                }
+                return summary;
+            }
+            return fileContent;
+        }
+
+        private string HandleReadImage(Dictionary<string, object> args)
+        {
+            string imgPath = args["filePath"].ToString();
+            string aiWorkspacePath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AI_Workspace"));
+            
+            string cleanedPath = imgPath;
+            string prefixSlash = "AI_Workspace/";
+            string prefixBackslash = "AI_Workspace\\";
+            if (cleanedPath.StartsWith(prefixSlash, StringComparison.OrdinalIgnoreCase))
+                cleanedPath = cleanedPath.Substring(prefixSlash.Length);
+            else if (cleanedPath.StartsWith(prefixBackslash, StringComparison.OrdinalIgnoreCase))
+                cleanedPath = cleanedPath.Substring(prefixBackslash.Length);
+
+            if (!File.Exists(cleanedPath))
+            {
+                string workspaceImgPath = Path.GetFullPath(Path.Combine(aiWorkspacePath, cleanedPath.TrimStart('/', '\\')));
+                if (File.Exists(workspaceImgPath))
+                {
+                    cleanedPath = workspaceImgPath;
+                }
+                else
+                {
+                    return $"[Error] 找不到圖片檔案: {imgPath} (已嘗試絕對路徑與 AI_Workspace 相對路徑)";
+                }
+            }
+            imgPath = cleanedPath;
+
+            try
+            {
+                string ext = Path.GetExtension(imgPath).ToLower();
+                string mime = "image/jpeg";
+                if (ext == ".png") mime = "image/png";
+                else if (ext == ".webp") mime = "image/webp";
+                else if (ext == ".heic") mime = "image/heic";
+                else if (ext == ".heif") mime = "image/heif";
+                
+                byte[] bytes = File.ReadAllBytes(imgPath);
+                string base64 = Convert.ToBase64String(bytes);
+                
+                if (_agent != null)
+                {
+                    if (!_agent.InjectImageHistory(imgPath, mime, base64))
+                    {
+                        return "[Error] 讀取圖片 (isImage=true) 無法與其他工具同時呼叫，請單獨使用此工具來讀取圖片。";
+                    }
+                }
+                
+                return "[SKIP_FUNCTION_RESPONSE]";
+            }
+            catch (Exception ex)
+            {
+                return $"[Error] 讀取圖片失敗: {ex.Message}";
+            }
+        }
+
+        private string HandleWriteFile(string funcName, Dictionary<string, object> args)
+        {
+            string errWrite = CheckRequiredArgs(funcName, args);
+            if (errWrite != null) return errWrite;
+
+            bool append = args.ContainsKey("append") ? Convert.ToBoolean(args["append"]) : true;
+            return _fileTools.WriteFile(
+                args["filePath"].ToString(),
+                args["content"].ToString(),
+                append);
+        }
+
+        private string HandleDeleteFile(string funcName, Dictionary<string, object> args)
+        {
+            string errDel = CheckRequiredArgs(funcName, args);
+            if (errDel != null) return errDel;
+
+            return _fileTools.DeleteFile(args["filePath"].ToString());
+        }
+
+        private string HandleMoveFile(string funcName, Dictionary<string, object> args)
+        {
+            string errMove = CheckRequiredArgs(funcName, args);
+            if (errMove != null) return errMove;
+
+            return _fileTools.MoveFile(args["sourcePath"].ToString(), args["destinationPath"].ToString());
+        }
+
+        private string HandleUpdateFileLine(string funcName, Dictionary<string, object> args)
+        {
+            string errUpd = CheckRequiredArgs(funcName, args);
+            if (errUpd != null) return errUpd;
+
+            int lineNum = Convert.ToInt32(args["lineNumber"]);
+            string newContent = args["newContent"].ToString();
+            return _fileTools.UpdateFileLine(args["filePath"].ToString(), lineNum, newContent);
+        }
+
+        private string HandleReadSkills()
+        {
+            return _fileTools.ReadSkills(_fileTools.SkillsPath);
+        }
+
+        private string HandleWriteSkill(string funcName, Dictionary<string, object> args)
+        {
+            string errWriteSk = CheckRequiredArgs(funcName, args);
+            if (errWriteSk != null) return errWriteSk;
+
+            string sName = args["skillName"].ToString();
+            string name = args["name"].ToString();
+            string desc = args["description"].ToString();
+            string content = args["content"].ToString();
+            return _fileTools.WriteSkill(sName, name, desc, content);
+        }
+
+        private string HandleWriteNote(string funcName, Dictionary<string, object> args)
+        {
+            string errWriteNote = CheckRequiredArgs(funcName, args);
+            if (errWriteNote != null) return errWriteNote;
+
+            string noteTitle = args["title"].ToString();
+            if (!noteTitle.EndsWith(".md", StringComparison.OrdinalIgnoreCase) && !noteTitle.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+            {
+                noteTitle += ".md";
+            }
+            string noteDesc = args["description"].ToString();
+            string noteContent = args["content"].ToString();
+            
+            string knowledgePath = Path.Combine(".agent", "knowledge", noteTitle).Replace("\\", "/");
+            string writeResult = _fileTools.WriteFile(knowledgePath, noteContent, false);
+            if (writeResult.StartsWith("錯誤"))
+            {
+                return writeResult;
+            }
+            
+            string updateIndexResult = UpdateKnowledgeIndex(noteTitle, noteDesc);
+            return $"{writeResult}\n{updateIndexResult}";
+        }
+
+        private string HandleSearchKnowledgeIndex()
+        {
+            string indexPath = Path.Combine(".agent", "knowledge", "00_INDEX.md").Replace("\\", "/");
+            string indexContent = _fileTools.ReadFile(indexPath);
+            if (indexContent.StartsWith("錯誤：找不到檔案"))
+            {
+                return "目前尚無知識索引 (00_INDEX.md)。";
+            }
+            return indexContent;
+        }
+
+        private string HandleSearchContent(string funcName, Dictionary<string, object> args)
+        {
+            string errSearchCon = CheckRequiredArgs(funcName, args);
+            if (errSearchCon != null) return errSearchCon;
+
+            string sq = args["query"].ToString();
+            string spath = args.ContainsKey("path") ? args["path"].ToString() : "";
+            string sfPattern = args.ContainsKey("filePattern") ? args["filePattern"].ToString() : "";
+            int ctxLines = args.ContainsKey("contextLines") ? Convert.ToInt32(args["contextLines"]) : 0;
+            return _fileTools.SearchContent(sq, spath, sfPattern, ctxLines);
         }
 
         private string UpdateKnowledgeIndex(string title, string description)
