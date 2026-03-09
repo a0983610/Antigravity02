@@ -480,6 +480,12 @@ namespace Antigravity02.Agents
                 try { return _inner != null ? _inner.PromptContinueAsync(message) : Task.FromResult(true); }
                 catch { return Task.FromResult(true); }
             }
+            
+            public Task<int> PromptSelectionAsync(string message, params string[] options)
+            {
+                try { return _inner != null ? _inner.PromptSelectionAsync(message, options) : Task.FromResult(0); }
+                catch { return Task.FromResult(0); }
+            }
         }
     }
 }
