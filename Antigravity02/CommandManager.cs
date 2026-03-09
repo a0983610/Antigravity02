@@ -193,5 +193,187 @@ namespace Antigravity02
             Console.WriteLine("=== 對話紀錄結束 ===\n");
             Console.ResetColor();
         }
+
+        /// <summary>
+        /// 提供具備自動完成與指令提示功能的控制台輸入讀取機制
+        /// </summary>
+        public static string ReadConsoleInput()
+        {
+            bool canUseInteractiveMenu = true;
+            try 
+            { 
+                if (Console.IsOutputRedirected || Console.IsInputRedirected)
+                    canUseInteractiveMenu = false;
+                _ = Console.CursorTop; // Test if we can read CursorTop
+            } 
+            catch { canUseInteractiveMenu = false; }
+
+            if (!canUseInteractiveMenu)
+            {
+                return Console.ReadLine();
+            }
+
+            try
+            {
+                int requiredSpace = 8;
+                int currentTop = Console.CursorTop;
+                int maxTopForBuffer = Console.BufferHeight - 1;
+                
+                // 確保底部有足夠空間，避免繪製 Hint 時視窗捲動導致 promptTop 失效
+                if (currentTop + requiredSpace > maxTopForBuffer)
+                {
+                    int linesToPush = (currentTop + requiredSpace) - maxTopForBuffer;
+                    for (int i = 0; i < linesToPush; i++)
+                    {
+                        Console.WriteLine();
+                    }
+                    Console.SetCursorPosition(Console.CursorLeft, Console.CursorTop - linesToPush);
+                }
+
+                int promptLeft = Console.CursorLeft;
+                int promptTop = Console.CursorTop;
+
+                var input = new System.Text.StringBuilder();
+                int cursorIndex = 0;
+                string[] allCommands = { "/new", "/save", "/load", "/time", "/rmock", "/help", "/exit" };
+                int lastHintCount = 0;
+                const int maxHintDisplay = 5;
+                int maxInputLength = Console.WindowWidth - promptLeft - 2; // 防止超出一行寬度
+
+                void ClearHints()
+                {
+                    for (int i = 0; i < lastHintCount; i++)
+                    {
+                        int targetRow = promptTop + 1 + i;
+                        if (targetRow >= Console.BufferHeight) break;
+                        Console.SetCursorPosition(0, targetRow);
+                        Console.Write(new string(' ', Console.WindowWidth - 1));
+                    }
+                    lastHintCount = 0;
+                }
+
+                while (true)
+                {
+                    // Draw input line
+                    Console.SetCursorPosition(promptLeft, promptTop);
+                    Console.Write(input.ToString() + " "); 
+                    Console.SetCursorPosition(promptLeft + cursorIndex, promptTop);
+
+                    string currentInput = input.ToString();
+                    var suggestions = new System.Collections.Generic.List<string>();
+                    
+                    // 只有輸入至少 2 個字元（如 /s）才開始提示，避免輸入 / 時顯示全部指令
+                    if (currentInput.StartsWith("/") && currentInput.Length >= 2)
+                    {
+                        string cmdPart = currentInput.Split(' ')[0].ToLower();
+                        foreach (var cmd in allCommands)
+                        {
+                            if (cmd.StartsWith(cmdPart) && cmd != cmdPart)
+                            {
+                                suggestions.Add(cmd);
+                                if (suggestions.Count >= maxHintDisplay) break;
+                            }
+                        }
+                    }
+
+                    ClearHints();
+                    
+                    lastHintCount = suggestions.Count;
+                    if (suggestions.Count > 0)
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        for (int i = 0; i < suggestions.Count; i++)
+                        {
+                            int targetRow = promptTop + 1 + i;
+                            if (targetRow >= Console.BufferHeight) break;
+                            Console.SetCursorPosition(0, targetRow);
+                            Console.Write("  Hint: " + suggestions[i] + " (按 Tab 自動完成)");
+                        }
+                        Console.ResetColor();
+                    }
+
+                    Console.SetCursorPosition(promptLeft + cursorIndex, promptTop);
+
+                    var keyInfo = Console.ReadKey(intercept: true);
+                    if (keyInfo.Key == ConsoleKey.Enter)
+                    {
+                        ClearHints();
+                        Console.WriteLine();
+                        break;
+                    }
+                    else if (keyInfo.Key == ConsoleKey.Backspace)
+                    {
+                        if (cursorIndex > 0)
+                        {
+                            input.Remove(cursorIndex - 1, 1);
+                            cursorIndex--;
+                            Console.SetCursorPosition(promptLeft + input.Length, promptTop);
+                            Console.Write(" ");
+                        }
+                    }
+                    else if (keyInfo.Key == ConsoleKey.Delete)
+                    {
+                        if (cursorIndex < input.Length)
+                        {
+                            input.Remove(cursorIndex, 1);
+                            Console.SetCursorPosition(promptLeft + input.Length, promptTop);
+                            Console.Write(" ");
+                        }
+                    }
+                    else if (keyInfo.Key == ConsoleKey.LeftArrow)
+                    {
+                        if (cursorIndex > 0) cursorIndex--;
+                    }
+                    else if (keyInfo.Key == ConsoleKey.RightArrow)
+                    {
+                        if (cursorIndex < input.Length) cursorIndex++;
+                    }
+                    else if (keyInfo.Key == ConsoleKey.Home)
+                    {
+                        cursorIndex = 0;
+                    }
+                    else if (keyInfo.Key == ConsoleKey.End)
+                    {
+                        cursorIndex = input.Length;
+                    }
+                    else if (keyInfo.Key == ConsoleKey.Tab)
+                    {
+                        if (suggestions.Count > 0)
+                        {
+                            string completion = suggestions[0];
+                            input.Clear();
+                            input.Append(completion);
+                            cursorIndex = input.Length;
+                            
+                            Console.SetCursorPosition(promptLeft, promptTop);
+                            Console.Write(new string(' ', Console.WindowWidth - promptLeft - 1));
+                        }
+                    }
+                    else if (keyInfo.Key == ConsoleKey.Escape)
+                    {
+                        // Escape 清除目前的輸入
+                        Console.SetCursorPosition(promptLeft, promptTop);
+                        Console.Write(new string(' ', input.Length + 1));
+                        input.Clear();
+                        cursorIndex = 0;
+                    }
+                    else if (!char.IsControl(keyInfo.KeyChar))
+                    {
+                        if (input.Length < maxInputLength)
+                        {
+                            input.Insert(cursorIndex, keyInfo.KeyChar);
+                            cursorIndex++;
+                        }
+                    }
+                }
+
+                return input.ToString().Trim();
+            }
+            catch
+            {
+                // Fallback in case of unexpected console error
+                return Console.ReadLine();
+            }
+        }
     }
 }
