@@ -69,7 +69,7 @@ namespace Antigravity02.Tools
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\n[System] 寫入 MockData 失敗: {ex.Message}");
+                Console.WriteLine($"\n[Error] 寫入 MockData 失敗: {ex.Message}");
                 Console.ResetColor();
             }
         }

@@ -137,7 +137,7 @@ namespace Antigravity02
 
             string initialInput = string.Join(" ", args);
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"\n[Startup Command] Detected arguments: {initialInput}");
+            Console.WriteLine($"\n[System] Detected arguments: {initialInput}");
             Console.ResetColor();
 
             bool isCommand = CommandManager.TryHandleCommand(initialInput, agent, out bool startShouldExit);
@@ -278,7 +278,7 @@ namespace Antigravity02
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[System Error] 無法創建 .env 檔案: {ex.Message}");
+                    Console.WriteLine($"[Error] 無法創建 .env 檔案: {ex.Message}");
                 }
             }
         }

@@ -8,14 +8,14 @@ namespace Antigravity02.UI
         public void ReportThinking(int iteration, string modelName)
         {
             Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.WriteLine($"\n[Thinking Iteration {iteration} ({modelName})] ...");
+            Console.WriteLine($"\n[Thinking] Iteration {iteration} ({modelName}) ...");
             Console.ResetColor();
         }
 
         public void ReportToolCall(string toolName, string args)
         {
             Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine($"Action: {toolName}");
+            Console.WriteLine($"[Tool Call] {toolName}");
             Console.ResetColor();
         }
 
@@ -24,7 +24,7 @@ namespace Antigravity02.UI
             Console.ForegroundColor = ConsoleColor.Gray;
             string text = resultSummary ?? "(no result)";
             string summary = text.Length > 100 ? text.Substring(0, 100) + "..." : text;
-            Console.WriteLine($"Result: {summary}");
+            Console.WriteLine($"[Tool Result] {summary}");
             Console.ResetColor();
         }
 
@@ -38,7 +38,7 @@ namespace Antigravity02.UI
         public void ReportError(string message)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"\nError: {message}");
+            Console.WriteLine($"\n[Error] {message}");
             Console.ResetColor();
         }
 

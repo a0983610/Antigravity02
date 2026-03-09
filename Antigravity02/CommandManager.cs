@@ -54,7 +54,7 @@ namespace Antigravity02
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"[System] Failed to save chat history to {path}");
+                    Console.WriteLine($"[Error] Failed to save chat history to {path}");
                     Console.ResetColor();
                 }
                 return true;
@@ -76,7 +76,7 @@ namespace Antigravity02
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"[System] Failed to load chat history from {path}");
+                    Console.WriteLine($"[Error] Failed to load chat history from {path}");
                     Console.ResetColor();
                 }
                 return true;
@@ -136,7 +136,7 @@ namespace Antigravity02
             }
 
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("\n=== 載入的對話紀錄 ===");
+            Console.WriteLine("\n[System] === 載入的對話紀錄 ===");
             Console.ResetColor();
 
             foreach (var entry in chatHistory)
@@ -190,7 +190,7 @@ namespace Antigravity02
             }
 
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("=== 對話紀錄結束 ===\n");
+            Console.WriteLine("[System] === 對話紀錄結束 ===\n");
             Console.ResetColor();
         }
 
