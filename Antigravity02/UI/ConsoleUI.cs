@@ -7,7 +7,7 @@ namespace Antigravity02.UI
     {
         public void ReportThinking(int iteration, string modelName)
         {
-            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.ForegroundColor = ConsoleColor.DarkCyan;
             Console.WriteLine($"\n[Thinking] Iteration {iteration} ({modelName}) ...");
             Console.ResetColor();
         }
