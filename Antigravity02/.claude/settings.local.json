@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d C:/Users/cm8/Downloads/TEST/Antigravity02/**)",
+      "Bash(dotnet --version)",
+      "Bash(wc -l *.cs Agents/*.cs Agents/Modules/*.cs AIClient/*.cs Tools/*.cs UI/*.cs Config/*.cs 2>/dev/null | tail -20)"
+    ]
+  }
+}
