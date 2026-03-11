@@ -129,7 +129,14 @@ namespace Antigravity02
 
             if (_commands.TryGetValue(cmdName, out var def))
             {
-                def.Handler(cmdArgs, agent, out shouldExit);
+                try
+                {
+                    def.Handler(cmdArgs, agent, out shouldExit);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[System] 指令執行時發生錯誤：{ex.Message}");
+                }
             }
             else
             {

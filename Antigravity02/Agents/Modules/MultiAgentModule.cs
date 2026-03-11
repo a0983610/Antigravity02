@@ -344,7 +344,7 @@ namespace Antigravity02.Agents
                             // 執行工具呼叫
                             string result = await _fileModule.TryHandleToolCallAsync(funcName, argsDict, ui, cancellationToken);
                             if (result == null) result = await _httpModule.TryHandleToolCallAsync(funcName, argsDict, ui, cancellationToken);
-                            if (result == null) result = "Error: Unknown tool.";
+                            if (result == null) result = $"Error: Unknown tool '{funcName}'.";
 
                             toolResponseParts.Add(_client.BuildToolResponsePart(funcName, result));
                             ui.ReportInfo($"[Expert: {expertName}] 工具返回結果長度: {result.Length}");

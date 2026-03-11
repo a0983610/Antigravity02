@@ -49,10 +49,10 @@ namespace Antigravity02.UI
             Console.ResetColor();
         }
 
-        public Task<bool> PromptContinueAsync(string message)
+        public async Task<bool> PromptContinueAsync(string message)
         {
-            int selection = PromptSelectionAsync(message, "Yes", "No").GetAwaiter().GetResult();
-            return Task.FromResult(selection == 0);
+            int selection = await PromptSelectionAsync(message, "Yes", "No");
+            return selection == 0;
         }
 
         public Task<int> PromptSelectionAsync(string message, params string[] options)

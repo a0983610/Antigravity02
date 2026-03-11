@@ -90,8 +90,8 @@ namespace Antigravity02.Tools
                     Directory.CreateDirectory(errFolderPath);
                 }
 
-                // 生成唯一編號: ERR_yyyyMMdd_HHmmss_隨機碼
-                string errorId = $"ERR_{DateTime.Now:yyyyMMdd_HHmmss}_{new Random().Next(1000, 9999)}";
+                // 生成唯一編號: ERR_yyyyMMdd_HHmmss_Guid前8碼
+                string errorId = $"ERR_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N").Substring(0, 8)}";
                 string errFileName = $"{errorId}.txt";
                 string errFilePath = Path.Combine(errFolderPath, errFileName);
 

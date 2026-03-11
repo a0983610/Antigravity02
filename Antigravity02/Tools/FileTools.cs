@@ -46,19 +46,15 @@ namespace Antigravity02.Tools
 
         private bool IsPathAllowed(string targetPath, string allowedBasePath)
         {
-            string normalizedTarget = targetPath;
-            if (!normalizedTarget.EndsWith(Path.DirectorySeparatorChar.ToString()))
-            {
-                normalizedTarget += Path.DirectorySeparatorChar;
-            }
+            string fullTarget = Path.GetFullPath(targetPath);
+            string fullAllowed = Path.GetFullPath(allowedBasePath);
 
-            string normalizedAllowed = allowedBasePath;
-            if (!normalizedAllowed.EndsWith(Path.DirectorySeparatorChar.ToString()))
-            {
-                normalizedAllowed += Path.DirectorySeparatorChar;
-            }
-            
-            return normalizedTarget.StartsWith(normalizedAllowed, StringComparison.OrdinalIgnoreCase);
+            if (!fullAllowed.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                fullAllowed += Path.DirectorySeparatorChar;
+            if (!fullTarget.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                fullTarget += Path.DirectorySeparatorChar;
+
+            return fullTarget.StartsWith(fullAllowed, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

@@ -130,6 +130,7 @@ namespace Antigravity02
 
                 try
                 {
+                    _currentCts?.Dispose();
                     _currentCts = new CancellationTokenSource();
                     await agent.ExecuteAsync(input, ui, _currentCts.Token);
                 }
@@ -168,6 +169,7 @@ namespace Antigravity02
                 // 若非指令，則視為 Prompt 直接執行
                 try
                 {
+                    _currentCts?.Dispose();
                     _currentCts = new CancellationTokenSource();
                     await agent.ExecuteAsync(initialInput, ui, _currentCts.Token);
                 }
@@ -223,12 +225,18 @@ namespace Antigravity02
                     var models = data["models"] as System.Collections.ArrayList;
                     if (models != null)
                     {
-                        foreach (Dictionary<string, object> model in models)
+                        foreach (var item in models)
                         {
-                            string name = model["name"].ToString().Replace("models/", "");
-                            string displayName = model["displayName"].ToString();
-                            
-                            var methods = model["supportedGenerationMethods"] as System.Collections.ArrayList;
+                            if (item is not Dictionary<string, object> model) continue;
+                            if (!model.TryGetValue("name", out var nameObj) || nameObj == null) continue;
+                            if (!model.TryGetValue("displayName", out var displayNameObj) || displayNameObj == null) continue;
+
+                            string name = nameObj.ToString().Replace("models/", "");
+                            string displayName = displayNameObj.ToString();
+
+                            var methods = model.TryGetValue("supportedGenerationMethods", out var methodsObj)
+                                ? methodsObj as System.Collections.ArrayList
+                                : null;
                             if (methods != null && methods.Contains("generateContent"))
                             {
                                 modelDocs.AppendLine($"# {name,-25} : {displayName}");

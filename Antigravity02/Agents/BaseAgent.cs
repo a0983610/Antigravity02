@@ -99,7 +99,7 @@ namespace Antigravity02.Agents
 
                     var data = JsonTools.Deserialize<Dictionary<string, object>>(rawJson);
 
-                    await HandleTokenUsageAsync(data, currentModelName, sw.ElapsedMilliseconds, ui);
+                    await HandleTokenUsageAsync(data, currentModelName, sw.ElapsedMilliseconds, ui, cancellationToken);
 
                     var parts = Client.ExtractResponseParts(data, out var modelContent);
                     if (parts == null) break;
@@ -122,6 +122,11 @@ namespace Antigravity02.Agents
                     {
                         continueLoop = false;
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    ui.ReportInfo("已中斷執行。");
+                    break;
                 }
                 catch (Exception ex)
                 {
@@ -173,14 +178,14 @@ namespace Antigravity02.Agents
             };
         }
 
-        private async Task HandleTokenUsageAsync(Dictionary<string, object> data, string modelName, long elapsedMs, IAgentUI ui)
+        private async Task HandleTokenUsageAsync(Dictionary<string, object> data, string modelName, long elapsedMs, IAgentUI ui, System.Threading.CancellationToken cancellationToken = default)
         {
             var (promptTokens, candidateTokens, totalTokens) = Client.ExtractTokenUsage(data);
             UsageLogger.LogApiUsage(modelName, elapsedMs, promptTokens, candidateTokens, totalTokens);
 
             if (totalTokens >= TokenThresholdForCompression)
             {
-                await CompressHistoryAsync(ui);
+                await CompressHistoryAsync(ui, cancellationToken);
             }
         }
 
@@ -344,7 +349,7 @@ namespace Antigravity02.Agents
         /// <summary>
         /// 歷史紀錄過長時，自動進行壓縮摘要
         /// </summary>
-        private async Task CompressHistoryAsync(IAgentUI ui)
+        private async Task CompressHistoryAsync(IAgentUI ui, System.Threading.CancellationToken cancellationToken = default)
         {
             if (ChatHistory.Count < 6) return;
 
@@ -365,7 +370,7 @@ namespace Antigravity02.Agents
 
             try
             {
-                string resultText = await GenerateSummaryAsync(compressPrompt);
+                string resultText = await GenerateSummaryAsync(compressPrompt, cancellationToken);
                 if (resultText != null)
                 {
                     string summaryText = resultText;
@@ -418,7 +423,7 @@ namespace Antigravity02.Agents
             return -1;
         }
 
-        private async Task<string> GenerateSummaryAsync(string prompt)
+        private async Task<string> GenerateSummaryAsync(string prompt, System.Threading.CancellationToken cancellationToken = default)
         {
             var request = new GenerateContentRequest
             {
@@ -428,9 +433,9 @@ namespace Antigravity02.Agents
                 }
             };
 
-            string rawJson = await FastClient.GenerateContentAsync(request);
+            string rawJson = await FastClient.GenerateContentAsync(request, cancellationToken);
             var data = JsonTools.Deserialize<Dictionary<string, object>>(rawJson);
-            
+
             return FastClient.ExtractTextFromResponseData(data) ?? "摘要失敗";
         }
 

@@ -67,7 +67,7 @@ namespace Antigravity02.Agents
                 }
             }
 
-            return "Error: Unknown tool.";
+            return $"Error: Unknown tool '{funcName}'.";
         }
     }
 }
