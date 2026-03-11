@@ -1,122 +1,131 @@
-Antigravity02 - C# 萬能 AI 代理系統
-專案簡介
-Antigravity02 是一個基於 .NET Framework 4.7.2 開發的終端機 AI Agent 應用程式。本專案整合了 Google Gemini API，並實作完整的 Function Calling 機制。透過此架構，AI 具備操作本機檔案、發送網路請求以及動態調度多領域專家的能力，旨在打造一個可自我擴充與維護的自動化工作站。
+Antigravity02 — C# 萬能 AI 自動化代理系統
+Antigravity02 是一個基於 .NET 8 開發的終端機 AI Agent 應用程式。本專案以 Google Gemini 為大腦，實作了精密的 Function Calling (工具呼叫) 循環，使 AI 具備操作檔案、網路通訊、自我進化以及調度「專家代理人」的能力，旨在打造一個可自我擴充的自動化工作站。
 
-核心架構與功能
-系統採用模組化 (Modular) 設計，包含以下核心能力：
-
+🚀 核心亮點
 1. 模組化工具箱 (Agent Modules)
-檔案系統沙盒 (FileModule)：提供受限於 AI_Workspace 目錄內的檔案操作，包含讀寫檔案、單行更新 (update_file_line)、關鍵字搜尋與搬移。此外，支援讀取圖片並自動轉為 Base64 注入 AI 的視覺輸入。
+系統採用解耦設計，賦予 AI 多維度的操作能力：
 
-網路請求 (HttpModule)：提供標準的 http_get 與 http_post 功能，允許 AI 直接與外部 API 或網頁互動。
+檔案系統沙盒 (FileModule)：具備完整的 CRUD、樹狀結構瀏覽與內容檢索功能。所有操作嚴格限制在 AI_Workspace/ 內。
 
-技能與知識庫管理：AI 可透過 write_skill 建立自訂的 Markdown 格式標準作業流程 (SOP)，並能透過 write_note 將重要資訊寫入知識庫，系統會自動維護 00_INDEX.md 索引供 AI 隨時檢索。
+視覺整合：支援將圖片路徑直接交給 AI，系統會自動轉碼並注入對話歷史，讓 AI「看見」工作區內的圖檔。
 
-2. 多專家協作系統 (Multi-Agent System)
-動態專家調度：主 Agent 可透過 consult_expert 工具建立並呼叫具備獨立角色設定 (Role) 與對話歷史的子專家 Session。
+網路存取 (HttpModule)：具備標準的 GET 與 POST 請求能力，可直接與外部 Web API 互動。
 
-非同步任務執行：支援將耗時的複雜任務交由專家在背景非同步執行 (is_async=true)。主 Agent 可繼續與使用者對話，並在稍後透過 check_task_status 查詢專家的執行結果。
+2. 多代理專家協作 (Multi-Agent System)
+動態專家調度 (consult_expert)：主代理可隨時諮詢特定領域的專家（如：架構專家、資安專家），每位專家擁有獨立的 System Instruction 與對話記憶。
 
-3. 資源與上下文管理
-雙模型動態切換：系統定義了 Smart (推理能力強) 與 Fast (速度快/成本低) 兩種模型模式。AI 可根據任務的複雜度，自行呼叫 switch_model_mode 切換運作模式。
+非同步任務編排：支援背景執行任務。主代理可將耗時任務指派給專家後繼續執行其他指令，稍後再透過 check_task_status 獲取結果。
 
-自動歷史壓縮機制：當單次對話累積的 Token 數量超過預設閾值 (預設為 80 萬 Token) 時，系統會自動在背景啟動 Fast 模型，對前半段對話歷史進行摘要與關鍵資訊萃取，藉此釋放上下文空間並避免記憶遺失。
+3. 雙模型運作與自動進化
+Smart & Fast 雙模式：支援同時設定「推理模型 (如 Gemini 2.0 Pro)」與「快速模型 (如 Gemini 2.0 Flash)」。AI 可根據任務複雜度呼叫 switch_model_mode 自行切換。
 
-4. 開發與除錯輔助
-Mock 測試模式：在未設定 API Key 或需要離線測試時，系統可自動讀取 MockData/ 目錄下的 JSON 模擬回應。開發者也可透過指令開啟錄製模式，將真實的 API 回應存為 Mock Data。
+自動對話壓縮：當 Token 累積達到閾值（預設 80 萬）時，系統會自動啟動 Fast 模型對前半段對話進行「關鍵資訊萃取」與摘要，並寫入知識庫，確保長效記憶不遺失。
 
-異常恢復：若程式執行中發生嚴重錯誤或被強制中斷，系統會自動將當前的對話紀錄備份為 JSON 檔案，方便後續載入重試。
+自我指令優化 (refine_my_behavior)：AI 能根據執行經驗，向使用者提議更新自己的系統指令。
 
-快速上手
-1. 初始化與配置
-首次執行 Antigravity02.exe 時，系統會自動於程式根目錄產生 .env 設定檔。請在 .env 中填寫您的 API 資訊：
+4. 知識庫與技能系統
+長效記憶 (Knowledge Base)：透過 write_note 將資訊持久化。系統會自動維護 00_INDEX.md 索引，並在每次對話啟動時主動讀取索引供 AI 檢索。
 
-程式碼片段
-GEMINI_API_KEY=你的_API_KEY_填寫於此
-GEMINI_SMART_MODEL=gemini-2.5-pro
-GEMINI_FAST_MODEL=gemini-2.5-flash
-(若未填寫 API Key，系統將以 Mock 模式啟動並讀取既有的測試資料。)
+技能擴充 (Skills)：AI 可將複雜的標準作業程序 (SOP) 封裝為 Markdown 格式的「技能」，儲存於 .agent/skills/ 中重複利用。
 
-2. 系統指令 (CLI Commands)
-在終端機介面中，您可以直接以自然語言與 AI 對話，或使用以下斜線指令控制系統：
+🛠️ 開發與健壯性
+Mock 模式與錄製：支援在無 API Key 環境下運作，透過 /rmock 指令可將真實 API 回應錄製為 Mock Data，便於離線測試與重現 Bug。
 
-/new：清除當前對話歷史，開啟全新任務。
+強化穩定性：已修復多項關鍵 Bug（如 BUG-001 至 BUG-017），包含資源洩漏、執行緒安全、路徑穿越防護及非同步死鎖預防。
 
-/save [path]：將當前對話紀錄匯出儲存為 JSON 檔案。
+📖 快速上手
+1. 環境配置
+首次執行後會自動產生 .env 檔案，請填入 API 金鑰：
 
-/load [path]：載入先前的對話紀錄檔案。
+Ini, TOML
+GEMINI_API_KEY=你的金鑰
+GEMINI_SMART_MODEL=gemini-2.0-flash (或 Pro 版本)
+GEMINI_FAST_MODEL=gemini-2.0-flash
+系統啟動時會自動查詢可用模型清單並寫入 .env 供參考。
 
-/time：開關訊息的時間戳記標頭 (讓 AI 具備時間感知)。
+2. 控制台指令
+在對話框輸入 / 即可觸發自動補全功能：
 
-/rmock：開關 API 回應錄製模式，開啟後會將真實 API 回應存入 MockData 目錄。
+/new：開啟全新對話，清除記憶。
 
-/help：顯示系統指令說明。
+/save [filename]：將當前對話歷史存檔。
+
+/load [filename]：載入歷史對話。
+
+/time：切換訊息時間戳記顯示。
 
 /exit：安全結束程式。
 
-安全性與邊界限制
-路徑限制：所有的檔案讀寫與搜尋操作，皆被程式碼層級嚴格限制在 AI_Workspace/ 目錄及其子目錄下。系統會主動阻擋任何包含 .. 的越權路徑存取嘗試。
-狀態暫留：Agent 的當前對話狀態預設存在於記憶體中，程式關閉即釋放。若有重要的發現或設定，請指示 AI 使用 write_note 將其持久化寫入實體檔案中。
+🛡️ 安全性規範
+沙盒機制：所有檔案 I/O 必須通過 IsPathAllowed 驗證，禁止任何 .. 或超出 AI_Workspace 的存取。
+
+敏感資訊保護：嚴禁 API Key 與機敏路徑外洩至日誌中。
+
+Last Updated: 2026-03-11
 
 ---
 
-Antigravity02 - Universal AI Agent System in C#
-Project Overview
-Antigravity02 is a terminal-based AI Agent application built on .NET Framework 4.7.2. This project integrates the Google Gemini API and implements a complete Function Calling mechanism. Through this architecture, the AI is equipped to operate local files, send network requests, and dynamically orchestrate multi-domain experts, aiming to build a self-extensible and maintainable automated workstation.
+Antigravity02 — Universal AI Automation Agent System (C#)
+Antigravity02 is a terminal-based AI Agent application built on .NET 8. It leverages Google Gemini as its core engine and implements a sophisticated Function Calling loop, enabling the AI to operate files, handle network communications, self-evolve, and orchestrate "expert agents" to create a self-extensible automated workstation.
 
-Core Architecture & Features
-The system adopts a modular design, encompassing the following core capabilities:
-
+🚀 Key Highlights
 1. Modular Toolset (Agent Modules)
-File System Sandbox (FileModule): Provides restricted file operations within the AI_Workspace directory, including reading/writing files, single-line updates (update_file_line), keyword searching, and moving files. Additionally, it supports reading images and automatically converting them to Base64 to inject into the AI's visual input.
+The system features a decoupled design, granting the AI multi-dimensional operational capabilities:
 
-Network Requests (HttpModule): Provides standard http_get and http_post functions, allowing the AI to interact directly with external APIs or web pages.
+File System Sandbox (FileModule): Provides full CRUD operations, directory tree browsing, and content indexing. All operations are strictly restricted within the AI_Workspace/ directory.
 
-Skills & Knowledge Base Management: The AI can create custom Markdown-formatted Standard Operating Procedures (SOPs) via write_skill. It can also write important information into the knowledge base using write_note, and the system will automatically maintain a 00_INDEX.md index for the AI to retrieve at any time.
+Visual Integration: Supports providing image paths directly to the AI. The system automatically encodes and injects images into the conversation history, allowing the AI to "see" files within the workspace.
 
-2. Multi-Agent System
-Dynamic Expert Orchestration: The main Agent can spawn and invoke sub-expert sessions with independent roles and conversation histories using the consult_expert tool.
+Network Access (HttpModule): Equipped with standard GET and POST request capabilities to interact directly with external Web APIs.
 
-Asynchronous Task Execution: Supports delegating time-consuming, complex tasks to experts to run asynchronously in the background (is_async=true). The main Agent can continue conversing with the user and query the expert's execution result later via check_task_status.
+2. Multi-Agent Expert Orchestration
+Dynamic Expert Dispatch (consult_expert): The main agent can consult specialized sub-agents (e.g., Architecture Expert, Security Expert) at any time. Each expert maintains its own System Instruction and conversation memory.
 
-3. Resource & Context Management
-Dynamic Dual-Model Switching: The system defines two model modes: Smart (high reasoning capability) and Fast (high speed/low cost). The AI can autonomously call switch_model_mode to switch operating modes based on task complexity.
+Asynchronous Task Orchestration: Supports background task execution. The main agent can assign time-consuming tasks to an expert and continue handling other user inputs, querying results later via check_task_status.
 
-Automatic History Compression: When the accumulated token count of a single conversation exceeds a predefined threshold (default is 800,000 tokens), the system automatically launches the Fast model in the background to summarize and extract key information from the earlier half of the conversation history. This frees up context space and prevents memory loss.
+3. Dual-Model Operation & Self-Evolution
+Smart & Fast Modes: Supports simultaneous configuration of a "Reasoning Model" (e.g., Gemini 2.0 Pro) and a "Fast Model" (e.g., Gemini 2.0 Flash). The AI can call switch_model_mode to switch based on task complexity.
 
-4. Development & Debugging Aids
-Mock Testing Mode: When no API Key is set or offline testing is required, the system can automatically read JSON mock responses from the MockData/ directory. Developers can also use commands to enable recording mode, saving real API responses as Mock Data.
+Automatic History Compression: When tokens exceed a threshold (default 800k), the system uses the Fast model to extract key information and summarize the history, saving it to the knowledge base to prevent memory loss.
 
-Error Recovery: If a critical error occurs or the program is forcibly interrupted during execution, the system will automatically back up the current conversation history as a JSON file for easy reloading and retrying later.
+Behavior Refinement (refine_my_behavior): The AI can propose updates to its own system instructions based on execution experience to optimize future performance.
 
-Getting Started
-1. Initialization & Configuration
-When running Antigravity02.exe for the first time, the system will automatically generate a .env configuration file in the program's root directory. Please fill in your API information in the .env file:
+4. Knowledge Base & Skills
+Long-term Memory (Knowledge Base): Persists information via write_note. The system automatically maintains a 00_INDEX.md index, which is proactively read at the start of each session for AI retrieval.
 
-程式碼片段
-GEMINI_API_KEY=Your_API_KEY_Here
-GEMINI_SMART_MODEL=gemini-2.5-pro
-GEMINI_FAST_MODEL=gemini-2.5-flash
-(If the API Key is left blank, the system will start in Mock mode and read existing test data.)
+Skill Expansion (Skills): The AI can encapsulate complex Standard Operating Procedures (SOPs) into Markdown-formatted "Skills" stored in .agent/skills/ for reuse.
 
-2. CLI Commands
-In the terminal interface, you can converse with the AI directly using natural language or use the following slash commands to control the system:
+🛠️ Development & Robustness
+Mock Mode & Recording: Operates without an API key by reading JSON mock responses from the MockData/ directory. The /rmock command enables recording real API responses as Mock Data for offline testing.
 
-/new: Clears the current conversation history and starts a new task.
+Hardened Stability: Fixed critical bugs (BUG-001 to BUG-017) regarding resource leaks, thread safety, path traversal protection, and async deadlock prevention.
 
-/save [path]: Exports and saves the current conversation history as a JSON file.
+📖 Getting Started
+1. Configuration
+A .env file is generated on first run. Please fill in your API key:
 
-/load [path]: Loads a previous conversation history file.
+Ini, TOML
+GEMINI_API_KEY=your_key_here
+GEMINI_SMART_MODEL=gemini-2.0-flash (or Pro version)
+GEMINI_FAST_MODEL=gemini-2.0-flash
+The system automatically queries available models and updates .env for reference upon startup.
 
-/time: Toggles the timestamp header for messages (giving the AI time awareness).
+2. Console Commands
+Type / in the prompt to trigger autocomplete:
 
-/rmock: Toggles the API response recording mode. When enabled, real API responses are saved to the MockData directory.
+/new: Clear memory and start a new conversation.
 
-/help: Displays the system command help menu.
+/save [filename]: Export current conversation history.
 
-/exit: Safely exits the program.
+/load [filename]: Import previous conversation history.
 
-Security & Boundaries
-Path Restrictions: All file read/write and search operations are strictly restricted at the code level to the AI_Workspace/ directory and its subdirectories. The system actively blocks any unauthorized path access attempts containing ...
+/time: Toggle message timestamp headers.
 
-State Persistence: The Agent's current conversation state defaults to existing only in memory and is released when the program closes. If there are important findings or configurations, instruct the AI to use write_note to persist them into physical files.
+/exit: Safely exit the application.
+
+🛡️ Security & Boundaries
+Sandbox Mechanism: All file I/O must pass IsPathAllowed validation, blocking any .. or access outside AI_Workspace.
+
+Data Protection: Sensitive information like API keys and system paths are strictly protected from leaking into logs.
+
+Last Updated: 2026-03-11
