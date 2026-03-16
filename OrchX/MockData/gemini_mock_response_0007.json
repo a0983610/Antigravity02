@@ -4,16 +4,13 @@
       "content": {
         "parts": [
           {
-            "text": "`search_content` 正常。接下來，我將使用 `move_file` 將 `test_file.txt` 更名為 `renamed_file.txt`。",
-            "thoughtSignature": "CtIBAb4+9vvOWa9hfQ3E33arprENWBNXmPXg/YpXreAzho2kiFO8QcYyjscv5uSJifCd9C1C193BPjJEKO7Y+DkkQSH+4geiacCCfpC07FWwpcK8KZ33vZa+1XwHAI5LpFvxqx3Ky8n3KcdsfYen59xZmpfW2Eh33AUdj5WTvuYmFsuuzHGgGcC6M5BzJBheXMKJ7GHhYac6YgUauZqAl7Z5spH9w0FkZiYYOTOSFKOOmpB7D5VIRoDxj3P4K+gu7yZYHUH6/8X+ehRZQqiskeP9nMA1"
+            "text": "`search_knowledge_index` 成功。接下來，我將用 `read_skills` 測試技能管理工具。",
+            "thoughtSignature": "CsMBAb4+9vsYpbrqKHAYyVLemvTEFlA8wAOas+E+6XqtgKNbDTJWYQlGjsYnVt0xKij+wsJ1hqip4InoUSc7Q7weVzGFm2VrFmd7GFYHAq4prS60kzgBvDCRaZ/4j2YFPaNPOMv6IMejRoGBub4ijG5+8qKqVCDYrgPTAYXSQ7orUEzq88brgFxiGgnAJ80i310o0VOoHJUTmuhHM3s9eEM7wjo+MYd7D4JMSvp0g3xhCNq01i2qdAxvneEuhje46MAOeGE+"
           },
           {
             "functionCall": {
-              "name": "move_file",
-              "args": {
-                "destinationPath": "renamed_file.txt",
-                "sourcePath": "test_file.txt"
-              }
+              "name": "read_skills",
+              "args": {}
             }
           }
         ],
@@ -25,17 +22,24 @@
     }
   ],
   "usageMetadata": {
-    "promptTokenCount": 4123,
-    "candidatesTokenCount": 69,
-    "totalTokenCount": 4246,
+    "promptTokenCount": 5270,
+    "candidatesTokenCount": 36,
+    "totalTokenCount": 5348,
+    "cachedContentTokenCount": 5083,
     "promptTokensDetails": [
       {
         "modality": "TEXT",
-        "tokenCount": 4123
+        "tokenCount": 5270
       }
     ],
-    "thoughtsTokenCount": 54
+    "cacheTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 5083
+      }
+    ],
+    "thoughtsTokenCount": 42
   },
   "modelVersion": "gemini-2.5-flash",
-  "responseId": "5j2paaHiGZme1e8PsLqJ6A0"
+  "responseId": "4ni3aZnjKIj92roPtKiH-Qw"
 }

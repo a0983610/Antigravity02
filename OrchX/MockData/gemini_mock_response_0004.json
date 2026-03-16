@@ -4,16 +4,16 @@
       "content": {
         "parts": [
           {
-            "text": "`read_file` 正常。接下來，我要用 `update_file_line` 修改 `test_file.txt` 的第一行。",
-            "thoughtSignature": "CrgBAb4+9vsH1SfBMhUKU3SmuJiZTZ91XMOGB9DQDMI8MObIu/RB6jvfKAig5uzCsHx83eEvG1NiL5BDbtcoE1MMzaaWFgaTr5UvQrdpgxoNhSwpcV5ZgrsYJmeys+vnyj+WgxYdLtIs+ltVY0hWa60JoUlzHQ26l2TpkAixfnwR/LmDq+Xgrb9X1IiY9IaksmExicfFZy9d/o1j3twafzYv2/I2PZsIrxjwdu7Ezu3Zjj/Ofhw+Wk3K/Q=="
+            "text": "`write_file` 已建立 `test_file.txt`。接著，我將使用 `search_content` 驗證其內容。",
+            "thoughtSignature": "Cr0BAb4+9vvNjeU3pVyNZL5P1LHHfTCGkbBW1di8cG84cJqMh7U1Is/SXV6KfaymVf0G5bXML0QG6of5HGe5WJ3XJm4icJmvVznIK6uHbBk/NezIp3hGqcTHFKTek62TZlezsZdGaPG1NPLrBBcFwGFb4yOAkU8LJeHCyAgFF9fX4EGCELO5O89BBMoC9pvxDvCUwzbY2mOfraUw91P5m8vW9EtNiAXAfS+MIQeOhv7dbA4x4zCikrcycoXFTJPS"
           },
           {
             "functionCall": {
-              "name": "update_file_line",
+              "name": "search_content",
               "args": {
-                "lineNumber": 1,
-                "filePath": "test_file.txt",
-                "newContent": "Updated first line."
+                "path": "AI_Workspace",
+                "filePattern": "*.txt",
+                "query": "test file"
               }
             }
           }
@@ -26,17 +26,17 @@
     }
   ],
   "usageMetadata": {
-    "promptTokenCount": 3832,
-    "candidatesTokenCount": 65,
-    "totalTokenCount": 3943,
+    "promptTokenCount": 4996,
+    "candidatesTokenCount": 60,
+    "totalTokenCount": 5101,
     "promptTokensDetails": [
       {
         "modality": "TEXT",
-        "tokenCount": 3832
+        "tokenCount": 4996
       }
     ],
-    "thoughtsTokenCount": 46
+    "thoughtsTokenCount": 45
   },
   "modelVersion": "gemini-2.5-flash",
-  "responseId": "4T2pae3ENJG0vr0Pr7-8qAw"
+  "responseId": "3ni3acq-GrL22roPn6Gi-Qw"
 }

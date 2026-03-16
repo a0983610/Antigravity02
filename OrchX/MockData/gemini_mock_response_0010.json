@@ -4,12 +4,12 @@
       "content": {
         "parts": [
           {
-            "text": "`delete_file` 成功刪除檔案，檔案系統工具測試完成。接下來，我將使用 `read_skills` 測試技能管理工具。",
-            "thoughtSignature": "CpgCAb4+9vvwK2kVIFtbrP1COz6ZJPXUiT+eEbBgc42p8viJpLVuNBxmWIzYvVuwCk/+3TVn8l2Wp5IuMus0f52ZnOzKi2dMm3ZBR2B2meBGPl5Fv8nwkmmtntXDCHagag/H4n+i9re/uu6y4kSfZl0t9efQeTuW5AGJic0JYePkbcHvT5n2tdO90gCSeEi1rqL8ugitx1GsLTV8ZlOgbJScFc2QXWTaUGWBE/U4OUVrKPZU72bUuvtCyMt1SHXPGrApGRwDSbUzE5kReyE3rFjN0Nv4reksUqvT7Kr2TPCI0LUINU3AoKAS3w3JnpiC0+QKRy5GH5yDlZyT/Lc3LqSHk4k0Wi45v8+bQw6p1F907ziOzAut1mmh2A=="
+            "text": "`Shell_Expert` 已回應。接著，我將使用 `list_experts` 確認所有活躍專家皆已成功建立。",
+            "thoughtSignature": "CsMBAb4+9vsVG0eQkaxFb1fpOceDwimQBfXYPf53m0h0/cdFGwLj6dCxV2ZuZrSkV/QpPg3YMFL4e+ERwaykSIZlwBiKQ3Dj9EWhNuMmiMi4g2UmeESEgVCCJ0TjW5B17IgMC5s+yjN34qb1re4aKraGd/0gR/zHlxAzro+/v8lO4aFitedej5XuCXzECXRiWHcs5QanhcnMhwb+/KFgH+TtfLgHv9195RROND37NRAnnGD+n4zihVXAHKoEkVtm1ixwBIG9"
           },
           {
             "functionCall": {
-              "name": "read_skills",
+              "name": "list_experts",
               "args": {}
             }
           }
@@ -22,24 +22,24 @@
     }
   ],
   "usageMetadata": {
-    "promptTokenCount": 4612,
-    "candidatesTokenCount": 43,
-    "totalTokenCount": 4720,
-    "cachedContentTokenCount": 3978,
+    "promptTokenCount": 5862,
+    "candidatesTokenCount": 37,
+    "totalTokenCount": 5940,
+    "cachedContentTokenCount": 5002,
     "promptTokensDetails": [
       {
         "modality": "TEXT",
-        "tokenCount": 4612
+        "tokenCount": 5862
       }
     ],
     "cacheTokensDetails": [
       {
         "modality": "TEXT",
-        "tokenCount": 3978
+        "tokenCount": 5002
       }
     ],
-    "thoughtsTokenCount": 65
+    "thoughtsTokenCount": 41
   },
   "modelVersion": "gemini-2.5-flash",
-  "responseId": "6j2paYLoJ5-a1e8Pzr7eiAQ"
+  "responseId": "6ni3afXHOoek0-kP4Zjy8AY"
 }

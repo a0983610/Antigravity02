@@ -4,17 +4,15 @@
       "content": {
         "parts": [
           {
-            "text": "`read_skills` 功能正常。接著，我將使用 `write_skill` 新增測試技能。",
-            "thoughtSignature": "Cp8BAb4+9vt97Sq/+SnC5UL8KajiJQOyWBg5lbiqj0HJsliuqAoREbLeU/GfMxvtyyS7pCMHaWtO0R2rx9gMNU5OVLB1Nulaq3EHQu1wK+jDyTUdD2jxHdIqFikD4Oqvb9Hf/RxsnKgmHiSFAQXM8ZguHUV+wRTIY4xugWIpT9ElK3oNl+OLvrSPsBEMlOoY0N9voruB90mUD6Bd/K6tl4YT"
+            "text": "`list_experts` 成功。現在我將與 `Python_Expert` 進行多輪對話，測試其持續對話能力。",
+            "thoughtSignature": "CucBAb4+9vuNJi3SoLFttporATb0zQTASLG1APZjT9jH+V0NWAJ1tA4KcxUVaFQdzgk/Cab/KYt2OWE8WxtkiVHV/AUEsJNcU+7PWSNCPtnfcRcS2/615FsBJEzxykgNBhhKjs0ionxQLF+lcg+Mpis2118aH3/QQN5lwFxnM2bPjgi/CHDRs4qzqfbhutltCTabZJvKJfUv94J0W2rarNXNjAfepP+RVIuM86kIZeNBooeoEt8IFNXIJRdpIsfqzcLfHl6w4CSs9M8K/bHuSzPzS3b8+9tTlewpIlNXn9YF6pBufSiX7wri"
           },
           {
             "functionCall": {
-              "name": "write_skill",
+              "name": "consult_expert",
               "args": {
-                "name": "Test Skill",
-                "description": "A simple test skill.",
-                "skillName": "test-skill",
-                "content": "This is a test skill content."
+                "expert_name": "Python_Expert",
+                "question": "除了切片之外，還有其他反轉字串的方法嗎？"
               }
             }
           }
@@ -27,24 +25,24 @@
     }
   ],
   "usageMetadata": {
-    "promptTokenCount": 4708,
-    "candidatesTokenCount": 65,
-    "totalTokenCount": 4805,
-    "cachedContentTokenCount": 3943,
+    "promptTokenCount": 6038,
+    "candidatesTokenCount": 68,
+    "totalTokenCount": 6158,
+    "cachedContentTokenCount": 5823,
     "promptTokensDetails": [
       {
         "modality": "TEXT",
-        "tokenCount": 4708
+        "tokenCount": 6038
       }
     ],
     "cacheTokensDetails": [
       {
         "modality": "TEXT",
-        "tokenCount": 3943
+        "tokenCount": 5823
       }
     ],
-    "thoughtsTokenCount": 32
+    "thoughtsTokenCount": 52
   },
   "modelVersion": "gemini-2.5-flash",
-  "responseId": "7D2paaSpE46e1e8P6rTj4A0"
+  "responseId": "7Hi3afz_Dor_2roP_5iGkA0"
 }

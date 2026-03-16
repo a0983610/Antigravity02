@@ -4,13 +4,15 @@
       "content": {
         "parts": [
           {
-            "text": "`write_skill` 成功新增技能。現在，我會再次讀取技能清單以驗證。",
-            "thoughtSignature": "CpQBAb4+9vuN/g+yA1JZS36CJlSk1pE+RhDCvqGrYvK29XrXl6EfVnUqcUcKdWyu26QHFo1pgeASybk6HCbY3NddYv+/FKutngvc+zBKTZ0aoOPhNC6CvyRJIscRdga1AyandnfjqpxGWOK+lKeCRDqXgC49JDoKo1X8HrAHcgKkW4nZdvhYA4Xu91hrWPsV2CRU2tzSLQ=="
+            "text": "`Python_Expert` 完成多輪對話，提供了反轉字串方法。現在，我將結束 `Python_Expert` 的 Session。",
+            "thoughtSignature": "CsoBAb4+9vu7tcFrL387TxkZuD78XmoBrGUpu5e9XIvr00zJ4op5IU6prySCXGxiNaqCLgYC5DvXLIBxQsvSiN8SGPpQ2QUAWiHc6pPqf9ZKP2qoAqzMylAU65MnN6cXcaGbAtT/2COWQBYnSibzfjYHKDHNeYvTSO/TfOxJ/RWZqEDntMgCIP2f5XjkvwT8TfvpEk9F6hU2wpqxOIFoE+MTXm+iV4JdDvVmbl36F9KaQJPJwwBAYcez35QgAKs/AffK3uV6rHGw5EmQCQ=="
           },
           {
             "functionCall": {
-              "name": "read_skills",
-              "args": {}
+              "name": "dismiss_expert",
+              "args": {
+                "expert_name": "Python_Expert"
+              }
             }
           }
         ],
@@ -22,24 +24,17 @@
     }
   ],
   "usageMetadata": {
-    "promptTokenCount": 4810,
-    "candidatesTokenCount": 34,
-    "totalTokenCount": 4872,
-    "cachedContentTokenCount": 3145,
+    "promptTokenCount": 6769,
+    "candidatesTokenCount": 50,
+    "totalTokenCount": 6863,
     "promptTokensDetails": [
       {
         "modality": "TEXT",
-        "tokenCount": 4810
+        "tokenCount": 6769
       }
     ],
-    "cacheTokensDetails": [
-      {
-        "modality": "TEXT",
-        "tokenCount": 3145
-      }
-    ],
-    "thoughtsTokenCount": 28
+    "thoughtsTokenCount": 44
   },
   "modelVersion": "gemini-2.5-flash",
-  "responseId": "7j2paa3RAsmO9tMPkq2jmA8"
+  "responseId": "8Xi3aevHGdaF0-kPyqGdGQ"
 }
