@@ -75,6 +75,20 @@ namespace OrchX.Agents
         {
             string info = base.BuildSystemFixedInfo();
 
+            // 顯示已完成但尚未交付的非同步專家回覆，讓主 Agent 自動收到結果
+            var completedTasks = System.Linq.Enumerable.ToList(TaskOrchestrator.GetCompletedUndeliveredTasks());
+            if (completedTasks.Count > 0)
+            {
+                info += "[Asynchronous Task Notifications!]\n";
+                foreach (var t in completedTasks)
+                {
+                    string statusLabel = t.Status == OrchX.Tools.TaskStatus.Completed ? "Success" : "Failed";
+                    info += $"- [Important] TaskId {t.TaskId} (Expert: {t.Assignee}) has finished ({statusLabel}). You MUST call read_task_result to read its result permanently.\n";
+                }
+                info += "\n";
+            }
+
+            // 顯示仍在進行中的非同步任務
             var activeTasks = System.Linq.Enumerable.ToList(TaskOrchestrator.GetActiveTasks());
             if (activeTasks.Count > 0)
             {

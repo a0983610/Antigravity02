@@ -21,6 +21,7 @@ namespace OrchX.Tools
         public string Result { get; set; } = string.Empty;
         public TaskStatus Status { get; set; } = TaskStatus.Pending;
         public DateTime CreatedTime { get; set; } = DateTime.Now;
+        public bool IsDelivered { get; set; } = false;
     }
 
     public static class TaskOrchestrator
@@ -64,6 +65,25 @@ namespace OrchX.Tools
         public static IEnumerable<TaskItem> GetActiveTasks()
         {
             return _tasks.Values.Where(t => t.Status == TaskStatus.Pending || t.Status == TaskStatus.Running);
+        }
+
+        /// <summary>
+        /// 取得已完成但尚未交付給主 Agent 的任務結果
+        /// </summary>
+        public static IEnumerable<TaskItem> GetCompletedUndeliveredTasks()
+        {
+            return _tasks.Values.Where(t => (t.Status == TaskStatus.Completed || t.Status == TaskStatus.Failed) && !t.IsDelivered);
+        }
+
+        /// <summary>
+        /// 將任務標記為已交付，避免重複顯示
+        /// </summary>
+        public static void MarkAsDelivered(string id)
+        {
+            if (_tasks.TryGetValue(id, out var task))
+            {
+                task.IsDelivered = true;
+            }
         }
     }
 }

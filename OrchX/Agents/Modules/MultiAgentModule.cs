@@ -50,8 +50,8 @@ namespace OrchX.Agents
             );
 
             yield return client.CreateFunctionDeclaration(
-                "check_task_status",
-                "查詢非同步指派給專家的任務狀態與結果。",
+                "read_task_result",
+                "讀取非同步指派給專家的任務狀態與結果。當收到任務完成的通知時，必須呼叫此工具來獲取並核銷完整結果。",
                 new
                 {
                     type = "object",
@@ -95,8 +95,8 @@ namespace OrchX.Agents
                 case "consult_expert":
                     return await HandleConsultExpertAsync(funcName, args, ui, cancellationToken);
 
-                case "check_task_status":
-                    return HandleCheckTaskStatus(funcName, args);
+                case "read_task_result":
+                    return HandleReadTaskResult(funcName, args);
 
                 case "list_experts":
                     return ListExperts();
@@ -138,7 +138,7 @@ namespace OrchX.Agents
                     try
                     {
                         TaskOrchestrator.UpdateTask(taskItem.TaskId, OrchX.Tools.TaskStatus.Running, null);
-                        string result = await ConsultExpertAsync(expertName, question, role, safeUi, cancellationToken);
+                        string result = await ConsultExpertAsync(expertName, question, role, safeUi, System.Threading.CancellationToken.None);
                         TaskOrchestrator.UpdateTask(taskItem.TaskId, OrchX.Tools.TaskStatus.Completed, result);
                     }
                     catch (Exception ex)
@@ -146,11 +146,11 @@ namespace OrchX.Agents
                         TaskOrchestrator.UpdateTask(taskItem.TaskId, OrchX.Tools.TaskStatus.Failed, $"Exception: {ex.Message}");
                     }
                 });
-                return $"[System]: 任務已非同步指派給專家 {expertName}，任務編號為 {taskItem.TaskId}。您可以稍後呼叫 check_task_status 查詢進度與結果。";
+                return $"[System]: 任務已非同步指派給專家 {expertName}，任務編號為 {taskItem.TaskId}。您可以稍後呼叫 read_task_result 查詢進度與結果。";
             }
         }
 
-        private string HandleCheckTaskStatus(string funcName, Dictionary<string, object> args)
+        private string HandleReadTaskResult(string funcName, Dictionary<string, object> args)
         {
             string errCTS = CheckRequiredArgs(funcName, args);
             if (errCTS != null) return errCTS;
@@ -164,10 +164,12 @@ namespace OrchX.Agents
 
             if (t.Status == OrchX.Tools.TaskStatus.Completed)
             {
+                TaskOrchestrator.MarkAsDelivered(tid);
                 return t.Result;
             }
             else if (t.Status == OrchX.Tools.TaskStatus.Failed)
             {
+                TaskOrchestrator.MarkAsDelivered(tid);
                 return $"[System Error]: 任務 {tid} 執行失敗: {t.Result}";
             }
             else
