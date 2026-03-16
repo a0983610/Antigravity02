@@ -13,7 +13,7 @@ using OrchX.UI;
 namespace OrchX.Agents
 {
     /// <summary>
-    /// 所有 AI Agent 的基底類別，實作核心的 Function Calling 循環
+    /// 所有 AI Agent 的基底類別，負責實作核心的 Function Calling 循環與對話歷史管理。
     /// </summary>
     public abstract class BaseAgent
     {
@@ -48,20 +48,21 @@ namespace OrchX.Agents
         }
 
         /// <summary>
-        /// 當模型模式切換時觸發，子類別可覆寫此方法以更新工具宣告等
+        /// 當模型模式切換 (Smart/Fast) 時觸發。
+        /// 子類別可覆寫此方法，藉此更新特定模式下的工具宣告或狀態。
         /// </summary>
         protected virtual void OnModelModeChanged() { }
 
         protected string SystemInstruction { get; set; }
 
         protected List<object> ToolDeclarations;
-        protected List<object> ChatHistory; // 新增：保存完整對話紀錄
+        protected List<object> ChatHistory; // 保存完整對話紀錄
         private bool _modelSwitchHappenedInThisTurn = false; // 追蹤此輪是否觸發模型切換
 
-        // 新增：動態開關時間戳記
+        // 動態開關時間戳記
         public bool EnableTimestampHeader { get; set; } = true;
         
-        // 新增：歷史紀錄壓縮 Token 閾值
+        // 歷史紀錄壓縮 Token 閾值
         public int TokenThresholdForCompression { get; set; } = 800000;
 
         private bool _hasWorkspaceExceededLimit = false;
@@ -80,11 +81,11 @@ namespace OrchX.Agents
             SmartClient = smartClient;
             FastClient = fastClient;
             ToolDeclarations = new List<object>();
-            ChatHistory = new List<object>(); // 新增：初始化對話紀錄
+            ChatHistory = new List<object>(); // 初始化對話紀錄
         }
 
         /// <summary>
-        /// 核心執行方法：接收指令並透過 UI 回饋進度
+        /// 核心執行方法：接收使用者指令，並透過 UI 回饋執行進度，處理 Function Calling 迴圈。
         /// </summary>
         public async Task ExecuteAsync(string userPrompt, IAgentUI ui, System.Threading.CancellationToken cancellationToken = default)
         {
@@ -158,6 +159,9 @@ namespace OrchX.Agents
             }
         }
 
+        /// <summary>
+        /// 將使用者的提問加入對話歷史紀錄，可選擇是否加上時間戳記。
+        /// </summary>
         private void AppendUserPromptToHistory(string userPrompt)
         {
             string finalPrompt = EnableTimestampHeader ? 
@@ -166,6 +170,9 @@ namespace OrchX.Agents
             ChatHistory.Add(Client.BuildMessageContent("user", finalPrompt));
         }
 
+        /// <summary>
+        /// 建立提交至 AI 模型的請求物件，包含歷史對話與系統提示。
+        /// </summary>
         private GenerateContentRequest CreateRequest()
         {
             var requestContents = new List<object>(ChatHistory);
@@ -192,6 +199,9 @@ namespace OrchX.Agents
             };
         }
 
+        /// <summary>
+        /// 處理並記錄 API 的 Token 使用量，若超過閾值則觸發歷史紀錄壓縮。
+        /// </summary>
         private async Task HandleTokenUsageAsync(Dictionary<string, object> data, string modelName, long elapsedMs, IAgentUI ui, System.Threading.CancellationToken cancellationToken = default)
         {
             var (promptTokens, candidateTokens, totalTokens) = Client.ExtractTokenUsage(data);
@@ -204,7 +214,8 @@ namespace OrchX.Agents
         }
 
         /// <summary>
-        /// 收集所有要附加至 User 提示的系統資訊字串。
+        /// 收集並建構要固定附加於系統提示之前的環境或背景資訊。
+        /// 包含系統環境、可用技能 (Skills)、知識庫索引與工作區檔案清單等。
         /// 子類別可覆寫此方法以自訂或擴充附加的內容。
         /// </summary>
         protected virtual string BuildSystemFixedInfo()
@@ -220,7 +231,7 @@ namespace OrchX.Agents
                 additionalInfo += $"[Available Skills]\n{skillsData}\n\n";
             }
 
-            // 新增：讀取知識庫索引
+            // 讀取知識庫索引
             string indexPath = Path.Combine(".agent", "knowledge", "00_INDEX.md").Replace("\\", "/");
             string indexContent = fileTools.ReadFile(indexPath);
             if (!string.IsNullOrWhiteSpace(indexContent) && !indexContent.StartsWith("錯誤"))
@@ -233,7 +244,7 @@ namespace OrchX.Agents
                 additionalInfo += $"[Long-term Memory Index]\n{indexContent}\n\n";
             }
 
-            // 新增：讀取當前 AI_Workspace 的檔案清單
+            // 讀取當前 AI_Workspace 的檔案清單
             if (!_hasWorkspaceExceededLimit)
             {
                 string workspaceFiles = fileTools.ListFiles("");
@@ -257,7 +268,8 @@ namespace OrchX.Agents
 
 
         /// <summary>
-        /// 將圖片注入對話歷史紀錄。若當前回合有多個 function call，則拒絕注入並回傳 false。
+        /// 將圖片注入對話歷史紀錄中。
+        /// 若當前回合 (Model Response) 有多個 Function Call，則拒絕注入並回傳 false，以免破壞歷史紀錄結構。
         /// </summary>
         public bool InjectImageHistory(string imagePath, string mimeType, string base64Data)
         {
@@ -290,6 +302,9 @@ namespace OrchX.Agents
             return true;
         }
 
+        /// <summary>
+        /// 處理 Function Call 完成後的歷史紀錄更新。
+        /// </summary>
         private void HandleFunctionCallHistoryUpdate(List<object> toolResponseParts)
         {
             if (toolResponseParts == null || toolResponseParts.Count == 0) return;
@@ -306,6 +321,9 @@ namespace OrchX.Agents
             }
         }
 
+        /// <summary>
+        /// 處理執行過程中的錯誤，並嘗試備份對話紀錄。
+        /// </summary>
         private void HandleExecutionError(Exception ex, IAgentUI ui)
         {
             UsageLogger.LogError($"Agent Error: {ex.Message}");
@@ -331,6 +349,9 @@ namespace OrchX.Agents
             }
         }
 
+        /// <summary>
+        /// 檢查是否超過最大對話次數，並詢問使用者是否繼續。
+        /// </summary>
         private async Task<bool> CheckMaxIterationsAndPromptAsync(int maxIterations, IAgentUI ui)
         {
             bool shouldContinue = await ui.PromptContinueAsync($"已達到單次最大執行次數 ({maxIterations})，任務尚未完成。");
@@ -346,12 +367,13 @@ namespace OrchX.Agents
         }
 
         /// <summary>
-        /// 子類別必須實作此方法來處理特定的工具呼叫
+        /// 處理模型發出的特定工具呼叫。子類別必須實作此方法以提供實際的工具行為。
         /// </summary>
         protected abstract Task<string> ProcessToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui, System.Threading.CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 歷史紀錄過長時，自動進行壓縮摘要
+        /// 當歷史紀錄過長（超過 Token 閾值）時，自動對前半段對話進行壓縮與摘要，以釋放 Token 空間。
+        /// 並嘗試提取明確資訊存入知識庫中。
         /// </summary>
         private async Task CompressHistoryAsync(IAgentUI ui, System.Threading.CancellationToken cancellationToken = default)
         {
@@ -414,6 +436,9 @@ namespace OrchX.Agents
             }
         }
 
+        /// <summary>
+        /// 尋找歷史紀錄中適合進行壓縮分割的索引位置 (從一半開始找尋第一個 user message)。
+        /// </summary>
         private int FindCompressSplitIndex()
         {
             int targetSplitIndex = ChatHistory.Count / 2;
@@ -427,6 +452,9 @@ namespace OrchX.Agents
             return -1;
         }
 
+        /// <summary>
+        /// 呼叫 Fast 模型產生歷史紀錄的摘要。
+        /// </summary>
         private async Task<string> GenerateSummaryAsync(string prompt, System.Threading.CancellationToken cancellationToken = default)
         {
             var request = new GenerateContentRequest
@@ -444,6 +472,9 @@ namespace OrchX.Agents
             return FastClient.ExtractTextFromResponseData(data) ?? "摘要失敗";
         }
 
+        /// <summary>
+        /// 將歷史紀錄的前半段替換為產生的摘要。
+        /// </summary>
         private void ApplyHistoryCompression(int splitIndex, string summaryText, IAgentUI ui)
         {
             ChatHistory.RemoveRange(0, splitIndex);
@@ -453,13 +484,16 @@ namespace OrchX.Agents
         }
 
         /// <summary>
-        /// 清除對話紀錄，開始新對話
+        /// 清除當前的對話紀錄，以便開始全新的對話循環。
         /// </summary>
         public void ClearChatHistory()
         {
             ChatHistory.Clear();
         }
 
+        /// <summary>
+        /// 將目前的對話歷史紀錄儲存至指定的檔案。
+        /// </summary>
         public bool SaveChatHistory(string filePath)
         {
             try
@@ -475,6 +509,9 @@ namespace OrchX.Agents
             }
         }
 
+        /// <summary>
+        /// 從指定的檔案載入對話歷史紀錄。
+        /// </summary>
         public bool LoadChatHistory(string filePath)
         {
             try
@@ -503,7 +540,7 @@ namespace OrchX.Agents
         }
 
         /// <summary>
-        /// 取得目前的對話紀錄 (唯讀)，供外部顯示用
+        /// 取得目前的對話紀錄 (唯讀)，主要提供給外部 (如 UI) 顯示使用。
         /// </summary>
         public ReadOnlyCollection<object> GetChatHistory()
         {
