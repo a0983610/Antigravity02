@@ -1,0 +1,45 @@
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`search_knowledge_index` 成功。接下來，我將用 `read_skills` 測試技能管理工具。",
+            "thoughtSignature": "CsMBAb4+9vsYpbrqKHAYyVLemvTEFlA8wAOas+E+6XqtgKNbDTJWYQlGjsYnVt0xKij+wsJ1hqip4InoUSc7Q7weVzGFm2VrFmd7GFYHAq4prS60kzgBvDCRaZ/4j2YFPaNPOMv6IMejRoGBub4ijG5+8qKqVCDYrgPTAYXSQ7orUEzq88brgFxiGgnAJ80i310o0VOoHJUTmuhHM3s9eEM7wjo+MYd7D4JMSvp0g3xhCNq01i2qdAxvneEuhje46MAOeGE+"
+          },
+          {
+            "functionCall": {
+              "name": "read_skills",
+              "args": {}
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 5270,
+    "candidatesTokenCount": 36,
+    "totalTokenCount": 5348,
+    "cachedContentTokenCount": 5083,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 5270
+      }
+    ],
+    "cacheTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 5083
+      }
+    ],
+    "thoughtsTokenCount": 42
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "4ni3aZnjKIj92roPtKiH-Qw"
+}

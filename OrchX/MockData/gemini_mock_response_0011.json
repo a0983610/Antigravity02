@@ -1,0 +1,48 @@
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`list_experts` 成功。現在我將與 `Python_Expert` 進行多輪對話，測試其持續對話能力。",
+            "thoughtSignature": "CucBAb4+9vuNJi3SoLFttporATb0zQTASLG1APZjT9jH+V0NWAJ1tA4KcxUVaFQdzgk/Cab/KYt2OWE8WxtkiVHV/AUEsJNcU+7PWSNCPtnfcRcS2/615FsBJEzxykgNBhhKjs0ionxQLF+lcg+Mpis2118aH3/QQN5lwFxnM2bPjgi/CHDRs4qzqfbhutltCTabZJvKJfUv94J0W2rarNXNjAfepP+RVIuM86kIZeNBooeoEt8IFNXIJRdpIsfqzcLfHl6w4CSs9M8K/bHuSzPzS3b8+9tTlewpIlNXn9YF6pBufSiX7wri"
+          },
+          {
+            "functionCall": {
+              "name": "consult_expert",
+              "args": {
+                "expert_name": "Python_Expert",
+                "question": "除了切片之外，還有其他反轉字串的方法嗎？"
+              }
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 6038,
+    "candidatesTokenCount": 68,
+    "totalTokenCount": 6158,
+    "cachedContentTokenCount": 5823,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 6038
+      }
+    ],
+    "cacheTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 5823
+      }
+    ],
+    "thoughtsTokenCount": 52
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "7Hi3afz_Dor_2roP_5iGkA0"
+}

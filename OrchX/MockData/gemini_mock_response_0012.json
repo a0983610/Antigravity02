@@ -1,0 +1,40 @@
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`Python_Expert` 完成多輪對話，提供了反轉字串方法。現在，我將結束 `Python_Expert` 的 Session。",
+            "thoughtSignature": "CsoBAb4+9vu7tcFrL387TxkZuD78XmoBrGUpu5e9XIvr00zJ4op5IU6prySCXGxiNaqCLgYC5DvXLIBxQsvSiN8SGPpQ2QUAWiHc6pPqf9ZKP2qoAqzMylAU65MnN6cXcaGbAtT/2COWQBYnSibzfjYHKDHNeYvTSO/TfOxJ/RWZqEDntMgCIP2f5XjkvwT8TfvpEk9F6hU2wpqxOIFoE+MTXm+iV4JdDvVmbl36F9KaQJPJwwBAYcez35QgAKs/AffK3uV6rHGw5EmQCQ=="
+          },
+          {
+            "functionCall": {
+              "name": "dismiss_expert",
+              "args": {
+                "expert_name": "Python_Expert"
+              }
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 6769,
+    "candidatesTokenCount": 50,
+    "totalTokenCount": 6863,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 6769
+      }
+    ],
+    "thoughtsTokenCount": 44
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "8Xi3aevHGdaF0-kPyqGdGQ"
+}

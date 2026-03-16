@@ -1,0 +1,47 @@
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`search_content` 已找到內容。現在，我將刪除 `test_file.txt`。",
+            "thoughtSignature": "CrgBAb4+9vtWYiH6y4twuGzMeqMiRfjKFySnVqlhloKZRp2PGbtRE7uKgsDsnGqj1THf6fwaS0KBICX06MfvmsluqQR883wczsyVsJoAEI7IEtygRdrRidqDkgr3cWdAyJUijX9qCpHI5Oebj5CSeSi0goXrsDxew65iGxlDX1vHrnDmX4f/ahBJriqXQ97GZGsVPgvHXnHuYHOf8u/FdJxR3aTDpYLGk91ZdGdKOk0zNybTG7w0B2MXqg=="
+          },
+          {
+            "functionCall": {
+              "name": "delete_file",
+              "args": {
+                "filePath": "AI_Workspace/test_file.txt"
+              }
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 5111,
+    "candidatesTokenCount": 46,
+    "totalTokenCount": 5200,
+    "cachedContentTokenCount": 3440,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 5111
+      }
+    ],
+    "cacheTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 3440
+      }
+    ],
+    "thoughtsTokenCount": 43
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "33i3ae2ANdix0-kP6_zEyQ0"
+}

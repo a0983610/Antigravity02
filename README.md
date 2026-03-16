@@ -1,131 +1,194 @@
-Antigravity02 — C# 萬能 AI 自動化代理系統
-Antigravity02 是一個基於 .NET 8 開發的終端機 AI Agent 應用程式。本專案以 Google Gemini 為大腦，實作了精密的 Function Calling (工具呼叫) 循環，使 AI 具備操作檔案、網路通訊、自我進化以及調度「專家代理人」的能力，旨在打造一個可自我擴充的自動化工作站。
+OrchX - 萬能 AI 自動化助手 (Universal AI Automation Agent)
+OrchX 是一個基於 .NET Framework 4.7.2 開發的高性能 C# AI Agent 系統。它不僅能與 Google Gemini API 進行對話，更核心的設計在於其「工具調度」與「多專家協作」能力，旨在打造一個能自我優化、具備環境感知能力的自動化工作站。
 
-🚀 核心亮點
-1. 模組化工具箱 (Agent Modules)
-系統採用解耦設計，賦予 AI 多維度的操作能力：
+🌟 核心特色
+1. 多專家協作模式 (Multi-Agent Ecosystem)
+透過 consult_expert 工具，主 Agent 可以動態建立多個領域專家（如安全性專家、架構師、程式碼審查員）。
 
-檔案系統沙盒 (FileModule)：具備完整的 CRUD、樹狀結構瀏覽與內容檢索功能。所有操作嚴格限制在 AI_Workspace/ 內。
+獨立記憶：每位專家擁有獨立的對話歷史與上下文。
 
-視覺整合：支援將圖片路徑直接交給 AI，系統會自動轉碼並注入對話歷史，讓 AI「看見」工作區內的圖檔。
+多輪對話：支援與特定專家進行深度的往復討論。
 
-網路存取 (HttpModule)：具備標準的 GET 與 POST 請求能力，可直接與外部 Web API 互動。
+2. 模組化工具箱 (Modular Toolset)
+採用插件式架構，易於擴充：
 
-2. 多代理專家協作 (Multi-Agent System)
-動態專家調度 (consult_expert)：主代理可隨時諮詢特定領域的專家（如：架構專家、資安專家），每位專家擁有獨立的 System Instruction 與對話記憶。
+檔案系統整合：
 
-非同步任務編排：支援背景執行任務。主代理可將耗時任務指派給專家後繼續執行其他指令，稍後再透過 check_task_status 獲取結果。
+樹狀目錄檢視 (list_files)，支援深層探索。
 
-3. 雙模型運作與自動進化
-Smart & Fast 雙模式：支援同時設定「推理模型 (如 Gemini 2.0 Pro)」與「快速模型 (如 Gemini 2.0 Flash)」。AI 可根據任務複雜度呼叫 switch_model_mode 自行切換。
+智慧讀寫：支援大檔案自動摘要（使用 Fast Model）與特定行修改 (update_file_line)。
 
-自動對話壓縮：當 Token 累積達到閾值（預設 80 萬）時，系統會自動啟動 Fast 模型對前半段對話進行「關鍵資訊萃取」與摘要，並寫入知識庫，確保長效記憶不遺失。
+技能與規範：內建 read_skills/write_skill 功能，允許 Agent 自行建立與學習操作規範。
 
-自我指令優化 (refine_my_behavior)：AI 能根據執行經驗，向使用者提議更新自己的系統指令。
+網路請求：完整的 http_get 與 http_post 支援，可串接外部 API。
 
-4. 知識庫與技能系統
-長效記憶 (Knowledge Base)：透過 write_note 將資訊持久化。系統會自動維護 00_INDEX.md 索引，並在每次對話啟動時主動讀取索引供 AI 檢索。
+模型調度：支援 smart (推理) 與 fast (速度) 雙模式切換。
 
-技能擴充 (Skills)：AI 可將複雜的標準作業程序 (SOP) 封裝為 Markdown 格式的「技能」，儲存於 .agent/skills/ 中重複利用。
+3. 自動化與自癒能力
+環境自適應：啟動時自動檢查 .env，若缺失則自動建立，並能連線 API 查詢可用模型清單。
 
-🛠️ 開發與健壯性
-Mock 模式與錄製：支援在無 API Key 環境下運作，透過 /rmock 指令可將真實 API 回應錄製為 Mock Data，便於離線測試與重現 Bug。
+Mock API 模式：在沒有 API Key 的情況下，可自動讀取 MockData/ 下的 JSON 回應，方便開發測試。
 
-強化穩定性：已修復多項關鍵 Bug（如 BUG-001 至 BUG-017），包含資源洩漏、執行緒安全、路徑穿越防護及非同步死鎖預防。
+故障備份：發生嚴重錯誤或使用者中斷時，系統會自動將對話歷史備份至 JSON 檔案。
 
-📖 快速上手
-1. 環境配置
-首次執行後會自動產生 .env 檔案，請填入 API 金鑰：
+📁 專案結構
+Plaintext
+OrchX/
+├── AIClient/           # Gemini API 通訊層，支援 Function Calling 封裝
+├── Agents/             # Agent 核心邏輯
+│   └── Modules/        # 功能模組 (File, Http, AIControl, MultiAgent)
+├── Config/             # 系統指令 (System Instruction) 與配置管理
+├── Tools/              # 底層工具 (JSON 處理、檔案 I/O、日誌紀錄)
+├── UI/                 # 抽象化 UI 介面 (目前實作 ConsoleUI)
+├── MockData/           # 離線測試用的模擬 API 回應
+└── AI_Workspace/       # AI 的作業區，包含 .agent (規範與知識庫)
+🛠 技術棧
+Language: C# 7.3+
 
-Ini, TOML
-GEMINI_API_KEY=你的金鑰
-GEMINI_SMART_MODEL=gemini-2.0-flash (或 Pro 版本)
-GEMINI_FAST_MODEL=gemini-2.0-flash
-系統啟動時會自動查詢可用模型清單並寫入 .env 供參考。
+Framework: .NET Framework 4.7.2
 
-2. 控制台指令
-在對話框輸入 / 即可觸發自動補全功能：
+Library:
 
-/new：開啟全新對話，清除記憶。
+Newtonsoft.Json: 高效 JSON 序列化
 
-/save [filename]：將當前對話歷史存檔。
+System.Net.Http: 異步網路請求
 
-/load [filename]：載入歷史對話。
+System.IO.Compression: 處理 .docx 等壓縮文件文字提取
 
-/time：切換訊息時間戳記顯示。
+🚀 快速上手
+複製專案：
 
-/exit：安全結束程式。
+Bash
+git clone https://github.com/your-repo/OrchX.git
+初始化配置：
+直接執行 OrchX.exe，程式會自動產生 .env 檔案。
 
-🛡️ 安全性規範
-沙盒機制：所有檔案 I/O 必須通過 IsPathAllowed 驗證，禁止任何 .. 或超出 AI_Workspace 的存取。
+設定 API Key：
+開啟 .env，填入你的 Google AI Studio API Key：
 
-敏感資訊保護：嚴禁 API Key 與機敏路徑外洩至日誌中。
+程式碼片段
+GEMINI_API_KEY=your_actual_key_here
+GEMINI_MODEL=gemini-2.0-flash
+開始互動：
+再次執行程式，即可在 Console 中輸入指令。
 
-Last Updated: 2026-03-11
+⌨️ 內建指令
+在對話輸入框中可以使用以下斜線指令：
 
----
+/help : 顯示說明清單。
 
-Antigravity02 — Universal AI Automation Agent System (C#)
-Antigravity02 is a terminal-based AI Agent application built on .NET 8. It leverages Google Gemini as its core engine and implements a sophisticated Function Calling loop, enabling the AI to operate files, handle network communications, self-evolve, and orchestrate "expert agents" to create a self-extensible automated workstation.
+/new  : 清除目前對話紀錄，開啟新任務。
 
-🚀 Key Highlights
-1. Modular Toolset (Agent Modules)
-The system features a decoupled design, granting the AI multi-dimensional operational capabilities:
+/save [path] : 儲存目前的對話紀錄。
 
-File System Sandbox (FileModule): Provides full CRUD operations, directory tree browsing, and content indexing. All operations are strictly restricted within the AI_Workspace/ directory.
+/load [path] : 載入先前的對話紀錄。
 
-Visual Integration: Supports providing image paths directly to the AI. The system automatically encodes and injects images into the conversation history, allowing the AI to "see" files within the workspace.
+/time : 開啟/關閉訊息的時間戳記。
 
-Network Access (HttpModule): Equipped with standard GET and POST request capabilities to interact directly with external Web APIs.
+/exit : 結束程式。
 
-2. Multi-Agent Expert Orchestration
-Dynamic Expert Dispatch (consult_expert): The main agent can consult specialized sub-agents (e.g., Architecture Expert, Security Expert) at any time. Each expert maintains its own System Instruction and conversation memory.
+🛡️ 開發品質與驗證 (Senior Dev Validator)
+本專案遵循資深開發規範，所有代碼異動皆建議經過以下驗證：
 
-Asynchronous Task Orchestration: Supports background task execution. The main agent can assign time-consuming tasks to an expert and continue handling other user inputs, querying results later via check_task_status.
+架構檢查：Namespace 必須與資料夾路徑對齊。
 
-3. Dual-Model Operation & Self-Evolution
-Smart & Fast Modes: Supports simultaneous configuration of a "Reasoning Model" (e.g., Gemini 2.0 Pro) and a "Fast Model" (e.g., Gemini 2.0 Flash). The AI can call switch_model_mode to switch based on task complexity.
+編譯驗證：確保執行 dotnet build 無誤。
 
-Automatic History Compression: When tokens exceed a threshold (default 800k), the system uses the Fast model to extract key information and summarize the history, saving it to the knowledge base to prevent memory loss.
+日誌追蹤：所有 API 呼叫與工具執行紀錄均儲存於 logs/ 資料夾中。
 
-Behavior Refinement (refine_my_behavior): The AI can propose updates to its own system instructions based on execution experience to optimize future performance.
+Copyright © 2026 Antigravity Project
 
-4. Knowledge Base & Skills
-Long-term Memory (Knowledge Base): Persists information via write_note. The system automatically maintains a 00_INDEX.md index, which is proactively read at the start of each session for AI retrieval.
+-----
 
-Skill Expansion (Skills): The AI can encapsulate complex Standard Operating Procedures (SOPs) into Markdown-formatted "Skills" stored in .agent/skills/ for reuse.
+OrchX - Universal AI Automation Agent
+OrchX is a high-performance AI Agent system built on .NET Framework 4.7.2. It goes beyond simple chat interactions with Google Gemini API by implementing a sophisticated "Tool Orchestration" and "Multi-Expert Collaboration" framework. It is designed to be a self-optimizing, environment-aware automation workstation.
 
-🛠️ Development & Robustness
-Mock Mode & Recording: Operates without an API key by reading JSON mock responses from the MockData/ directory. The /rmock command enables recording real API responses as Mock Data for offline testing.
+🌟 Key Features
+1. Multi-Agent Ecosystem
+Through the consult_expert tool, the main agent can dynamically spawn and consult specialized AI experts (e.g., Security Expert, Architect, Code Reviewer).
 
-Hardened Stability: Fixed critical bugs (BUG-001 to BUG-017) regarding resource leaks, thread safety, path traversal protection, and async deadlock prevention.
+Independent Sessions: Each expert maintains its own isolated conversation history and context.
 
-📖 Getting Started
-1. Configuration
-A .env file is generated on first run. Please fill in your API key:
+Multi-turn Reasoning: Supports deep, back-and-forth discussions with specific experts to solve complex tasks.
 
-Ini, TOML
-GEMINI_API_KEY=your_key_here
-GEMINI_SMART_MODEL=gemini-2.0-flash (or Pro version)
-GEMINI_FAST_MODEL=gemini-2.0-flash
-The system automatically queries available models and updates .env for reference upon startup.
+2. Modular Toolset
+The system utilizes a pluggable architecture for easy expansion:
 
-2. Console Commands
-Type / in the prompt to trigger autocomplete:
+FileSystem Integration:
 
-/new: Clear memory and start a new conversation.
+Tree View: Explore deep directory structures using list_files.
 
-/save [filename]: Export current conversation history.
+Smart I/O: Supports automatic summarization for large files (via Fast Model) and targeted line updates with update_file_line.
 
-/load [filename]: Import previous conversation history.
+Skills & Rules: Includes read_skills and write_skill features, allowing the agent to create and learn its own operational procedures.
 
-/time: Toggle message timestamp headers.
+Networking: Full support for http_get and http_post to interface with external APIs.
 
-/exit: Safely exit the application.
+Model Orchestration: Dynamic switching between Smart (Reasoning) and Fast (Speed) modes.
 
-🛡️ Security & Boundaries
-Sandbox Mechanism: All file I/O must pass IsPathAllowed validation, blocking any .. or access outside AI_Workspace.
+3. Automation & Self-Healing
+Environment Adaptation: Automatically checks for .env files on startup; creates missing templates and fetches the latest available Gemini models from the API.
 
-Data Protection: Sensitive information like API keys and system paths are strictly protected from leaking into logs.
+Mock API Mode: When an API Key is absent, the system reads pre-defined responses from the MockData/ directory for offline testing.
 
-Last Updated: 2026-03-11
+Failure Recovery: Automatically backs up conversation history to JSON files during critical errors or user interruptions.
+
+📁 Project Structure
+Plaintext
+OrchX/
+├── AIClient/           # Gemini API communication layer with Function Calling
+├── Agents/             # Core Agent logic and BaseAgent implementation
+│   └── Modules/        # Functional modules (File, Http, AIControl, MultiAgent)
+├── Config/             # System Instructions and configuration management
+├── Tools/              # Utilities (JSON, File I/O, Usage Logger)
+├── UI/                 # Abstraction for UI interfaces (ConsoleUI)
+├── MockData/           # Mock JSON responses for offline development
+└── AI_Workspace/       # Dedicated workspace for AI operations (.agent rules/knowledge)
+🛠 Tech Stack
+Language: C# 7.3+
+
+Framework: .NET Framework 4.7.2
+
+Libraries:
+
+Newtonsoft.Json: For high-performance JSON serialization.
+
+System.Net.Http: For asynchronous network requests.
+
+System.IO.Compression: For text extraction from compressed formats like .docx.
+
+🚀 Getting Started
+Clone the Repository:
+
+Bash
+git clone https://github.com/your-repo/OrchX.git
+Initialize Configuration:
+Run OrchX.exe once; the program will automatically generate a .env file.
+
+Set API Key:
+Open .env and enter your Google AI Studio API Key:
+
+程式碼片段
+GEMINI_API_KEY=your_actual_key_here
+GEMINI_MODEL=gemini-2.0-flash
+Start Interaction:
+Launch the application again to start commanding the agent via the console.
+
+⌨️ Built-in Commands
+The following slash commands can be used in the input prompt:
+
+/help : List all available commands.
+
+/new  : Clear current history and start a new session.
+
+/save [path] : Save current chat history to a file.
+
+/load [path] : Load previous chat history.
+
+/time : Toggle timestamps for user messages.
+
+/exit : Close the program.
+
+Copyright © 2026 Antigravity Project
+
+

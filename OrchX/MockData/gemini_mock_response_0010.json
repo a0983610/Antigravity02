@@ -1,0 +1,45 @@
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "`Shell_Expert` 已回應。接著，我將使用 `list_experts` 確認所有活躍專家皆已成功建立。",
+            "thoughtSignature": "CsMBAb4+9vsVG0eQkaxFb1fpOceDwimQBfXYPf53m0h0/cdFGwLj6dCxV2ZuZrSkV/QpPg3YMFL4e+ERwaykSIZlwBiKQ3Dj9EWhNuMmiMi4g2UmeESEgVCCJ0TjW5B17IgMC5s+yjN34qb1re4aKraGd/0gR/zHlxAzro+/v8lO4aFitedej5XuCXzECXRiWHcs5QanhcnMhwb+/KFgH+TtfLgHv9195RROND37NRAnnGD+n4zihVXAHKoEkVtm1ixwBIG9"
+          },
+          {
+            "functionCall": {
+              "name": "list_experts",
+              "args": {}
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "finishMessage": "Model generated function call(s)."
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 5862,
+    "candidatesTokenCount": 37,
+    "totalTokenCount": 5940,
+    "cachedContentTokenCount": 5002,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 5862
+      }
+    ],
+    "cacheTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 5002
+      }
+    ],
+    "thoughtsTokenCount": 41
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "6ni3afXHOoek0-kP4Zjy8AY"
+}
