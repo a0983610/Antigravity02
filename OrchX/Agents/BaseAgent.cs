@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 using OrchX.AIClient;
@@ -61,6 +62,15 @@ namespace OrchX.Agents
         public int TokenThresholdForCompression { get; set; } = 800000;
 
         private bool _hasWorkspaceExceededLimit = false;
+
+        // 靜態快取：系統環境資訊不會變動，只需初始化一次
+        private static readonly string _cachedSystemEnvironmentInfo = BuildSystemEnvironmentInfo();
+
+        private static string BuildSystemEnvironmentInfo()
+        {
+            return $"[System Environment]\n" +
+                   $"OS: {RuntimeInformation.OSDescription} ({RuntimeInformation.OSArchitecture})\n";
+        }
 
         protected BaseAgent(IAIClient smartClient, IAIClient fastClient)
         {
@@ -198,6 +208,8 @@ namespace OrchX.Agents
             var fileTools = new FileTools();
             string skillsData = fileTools.ReadSkills(fileTools.SkillsPath);
             string additionalInfo = string.Empty;
+            
+            additionalInfo += _cachedSystemEnvironmentInfo + $"Current Directory: {Environment.CurrentDirectory}\n\n";
             
             if (!string.IsNullOrWhiteSpace(skillsData))
             {
