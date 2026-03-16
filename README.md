@@ -1,5 +1,5 @@
-Antigravity02 - 萬能 AI 自動化助手 (Universal AI Automation Agent)
-Antigravity02 是一個基於 .NET Framework 4.7.2 開發的高性能 C# AI Agent 系統。它不僅能與 Google Gemini API 進行對話，更核心的設計在於其「工具調度」與「多專家協作」能力，旨在打造一個能自我優化、具備環境感知能力的自動化工作站。
+OrchX - 萬能 AI 自動化助手 (Universal AI Automation Agent)
+OrchX 是一個基於 .NET Framework 4.7.2 開發的高性能 C# AI Agent 系統。它不僅能與 Google Gemini API 進行對話，更核心的設計在於其「工具調度」與「多專家協作」能力，旨在打造一個能自我優化、具備環境感知能力的自動化工作站。
 
 🌟 核心特色
 1. 多專家協作模式 (Multi-Agent Ecosystem)
@@ -33,7 +33,7 @@ Mock API 模式：在沒有 API Key 的情況下，可自動讀取 MockData/ 下
 
 📁 專案結構
 Plaintext
-Antigravity02/
+OrchX/
 ├── AIClient/           # Gemini API 通訊層，支援 Function Calling 封裝
 ├── Agents/             # Agent 核心邏輯
 │   └── Modules/        # 功能模組 (File, Http, AIControl, MultiAgent)
@@ -59,9 +59,9 @@ System.IO.Compression: 處理 .docx 等壓縮文件文字提取
 複製專案：
 
 Bash
-git clone https://github.com/your-repo/Antigravity02.git
+git clone https://github.com/your-repo/OrchX.git
 初始化配置：
-直接執行 Antigravity02.exe，程式會自動產生 .env 檔案。
+直接執行 OrchX.exe，程式會自動產生 .env 檔案。
 
 設定 API Key：
 開啟 .env，填入你的 Google AI Studio API Key：
@@ -100,8 +100,8 @@ Copyright © 2026 Antigravity Project
 
 -----
 
-Antigravity02 - Universal AI Automation Agent
-Antigravity02 is a high-performance AI Agent system built on .NET Framework 4.7.2. It goes beyond simple chat interactions with Google Gemini API by implementing a sophisticated "Tool Orchestration" and "Multi-Expert Collaboration" framework. It is designed to be a self-optimizing, environment-aware automation workstation.
+OrchX - Universal AI Automation Agent
+OrchX is a high-performance AI Agent system built on .NET Framework 4.7.2. It goes beyond simple chat interactions with Google Gemini API by implementing a sophisticated "Tool Orchestration" and "Multi-Expert Collaboration" framework. It is designed to be a self-optimizing, environment-aware automation workstation.
 
 🌟 Key Features
 1. Multi-Agent Ecosystem
@@ -135,7 +135,7 @@ Failure Recovery: Automatically backs up conversation history to JSON files duri
 
 📁 Project Structure
 Plaintext
-Antigravity02/
+OrchX/
 ├── AIClient/           # Gemini API communication layer with Function Calling
 ├── Agents/             # Core Agent logic and BaseAgent implementation
 │   └── Modules/        # Functional modules (File, Http, AIControl, MultiAgent)
@@ -161,9 +161,9 @@ System.IO.Compression: For text extraction from compressed formats like .docx.
 Clone the Repository:
 
 Bash
-git clone https://github.com/your-repo/Antigravity02.git
+git clone https://github.com/your-repo/OrchX.git
 Initialize Configuration:
-Run Antigravity02.exe once; the program will automatically generate a .env file.
+Run OrchX.exe once; the program will automatically generate a .env file.
 
 Set API Key:
 Open .env and enter your Google AI Studio API Key:
