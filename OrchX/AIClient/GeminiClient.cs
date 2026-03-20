@@ -230,7 +230,12 @@ namespace OrchX.AIClient
                     hasFunctionCall = true;
                     var call = part["functionCall"] as Dictionary<string, object>;
                     if (call == null) continue;
-                    string funcName = call["name"].ToString();
+                    string funcName = call["name"]?.ToString() ?? string.Empty;
+                    if (string.IsNullOrEmpty(funcName))
+                    {
+                        UsageLogger.LogError("ProcessModelPartsAsync: functionCall 缺少有效的 name，已跳過。");
+                        continue;
+                    }
                     var argsDict = (call.ContainsKey("args") ? call["args"] as Dictionary<string, object> : null) ?? new Dictionary<string, object>();
 
                     ui.ReportToolCall(funcName, JsonTools.Serialize(argsDict));

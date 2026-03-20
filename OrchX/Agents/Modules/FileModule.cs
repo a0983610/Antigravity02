@@ -280,7 +280,7 @@ namespace OrchX.Agents
             string resolvedPath = Path.GetFullPath(Path.Combine(aiWorkspacePath, cleanedPath.TrimStart('/', '\\')));
 
             // 沙盒驗證：確保最終路徑在 AI_Workspace 內
-            if (!resolvedPath.StartsWith(aiWorkspacePath, StringComparison.OrdinalIgnoreCase))
+            if (!_fileTools.IsPathAllowed(resolvedPath, aiWorkspacePath))
             {
                 return $"[Error] 超出授權存取範圍，圖片僅可讀取 AI_Workspace 內的檔案。";
             }
@@ -352,8 +352,12 @@ namespace OrchX.Agents
             string errUpd = CheckRequiredArgs(funcName, args);
             if (errUpd != null) return errUpd;
 
-            int lineNum = Convert.ToInt32(args["lineNumber"]);
-            string newContent = args["newContent"].ToString();
+            if (!int.TryParse(args["lineNumber"]?.ToString(), out int lineNum))
+            {
+                return "[Error] 無效的行號參數，'lineNumber' 必須為整數。";
+            }
+
+            string newContent = args["newContent"]?.ToString() ?? string.Empty;
             return _fileTools.UpdateFileLine(args["filePath"].ToString(), lineNum, newContent);
         }
 

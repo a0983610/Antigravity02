@@ -22,6 +22,7 @@ namespace OrchX.Agents
         /// 以 expert_name 為 Key 管理多個專家代理，支援多執行緒安全存取
         /// </summary>
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, ExpertAgent> _agents = new System.Collections.Concurrent.ConcurrentDictionary<string, ExpertAgent>(StringComparer.OrdinalIgnoreCase);
+        private readonly object _agentLock = new object();
 
         public MultiAgentModule(BaseAgent agent)
         {
@@ -152,14 +153,18 @@ namespace OrchX.Agents
                     try
                     {
                         TaskOrchestrator.UpdateTask(taskItem.TaskId, OrchX.Tools.TaskStatus.Running, null);
-                        string result = await ConsultExpertAsync(expertName, question, role, safeUi, System.Threading.CancellationToken.None);
+                        string result = await ConsultExpertAsync(expertName, question, role, safeUi, cancellationToken);
                         TaskOrchestrator.UpdateTask(taskItem.TaskId, OrchX.Tools.TaskStatus.Completed, result);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        TaskOrchestrator.UpdateTask(taskItem.TaskId, OrchX.Tools.TaskStatus.Failed, "Task was canceled.");
                     }
                     catch (Exception ex)
                     {
                         TaskOrchestrator.UpdateTask(taskItem.TaskId, OrchX.Tools.TaskStatus.Failed, $"Exception: {ex.Message}");
                     }
-                });
+                }, cancellationToken);
                 return $"[System]: 任務已非同步指派給專家 {expertName}，任務編號為 {taskItem.TaskId}。您可以稍後呼叫 read_task_result 查詢進度與結果。";
             }
         }
@@ -224,30 +229,24 @@ namespace OrchX.Agents
             ExpertAgent agent = null;
             bool isNewAgent = false;
 
-            if (_agents.TryGetValue(expertName, out agent))
+            lock (_agentLock)
             {
-                if (!string.IsNullOrEmpty(role))
+                if (_agents.TryGetValue(expertName, out agent))
                 {
-                    agent.Role = role;
+                    if (!string.IsNullOrEmpty(role))
+                    {
+                        agent.Role = role;
+                    }
                 }
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(role))
+                else
                 {
-                    return $"[System Error]: 建立新專家 '{expertName}' 時必須提供 'role' 設定（專業背景與指導原則）。";
-                }
-                agent = new ExpertAgent(expertName, role, _smartClient, _fastClient);
-                isNewAgent = true;
-
-                agent = _agents.GetOrAdd(expertName, agent);
-                if (agent.Role != role)
-                {
-                     isNewAgent = false; 
-                     if (!string.IsNullOrEmpty(role))
-                     {
-                         agent.Role = role;
-                     }
+                    if (string.IsNullOrEmpty(role))
+                    {
+                        return $"[System Error]: 建立新專家 '{expertName}' 時必須提供 'role' 設定（專業背景與指導原則）。";
+                    }
+                    agent = new ExpertAgent(expertName, role, _smartClient, _fastClient);
+                    isNewAgent = true;
+                    _agents[expertName] = agent;
                 }
             }
 
@@ -258,7 +257,7 @@ namespace OrchX.Agents
         {
             try
             {
-                int currentTurn = (agent.GetChatHistory().Count / 2) + 1;
+                int currentTurn = GetTurnCount(agent) + 1;
                 
                 var prefixedUi = new ExpertPrefixUI(ui, agent.Name);
 
@@ -312,7 +311,7 @@ namespace OrchX.Agents
 
                 if (!string.IsNullOrEmpty(finalResponseText))
                 {
-                    int turnCount = agent.GetChatHistory().Count / 2;
+                    int turnCount = GetTurnCount(agent);
                     string sessionInfo = isNewAgent
                         ? $" (新建專家 Session，角色: {Truncate(agent.Role, 50)})"
                         : $" (第 {turnCount} 輪對話)";
@@ -341,7 +340,7 @@ namespace OrchX.Agents
 
             foreach (var kvp in _agents)
             {
-                int turns = kvp.Value.GetChatHistory().Count / 2;
+                int turns = GetTurnCount(kvp.Value);
                 string rolePreview = Truncate(kvp.Value.Role, 60);
                 sb.AppendLine($"  [{kvp.Key}] 對話輪數: {turns} | 角色: {rolePreview}");
             }
@@ -358,11 +357,29 @@ namespace OrchX.Agents
 
             if (_agents.TryRemove(expertName, out var agentToRemove))
             {
-                int turns = agentToRemove.GetChatHistory().Count / 2;
+                int turns = GetTurnCount(agentToRemove);
                 return $"已結束專家 {expertName} （共進行了 {turns} 輪對話）。";
             }
 
             return $"[System]: 找不到名為 {expertName} 的專家。";
+        }
+
+        private int GetTurnCount(ExpertAgent agent)
+        {
+            if (agent == null) return 0;
+            int count = 0;
+            var history = agent.GetChatHistory();
+            if (history != null)
+            {
+                foreach (var msg in history)
+                {
+                    if (agent.SmartClient.TryGetRoleAndPartsFromMessage(msg, out string role, out _) && role == "user")
+                    {
+                        count++;
+                    }
+                }
+            }
+            return count;
         }
 
         private static string Truncate(string text, int maxLength)

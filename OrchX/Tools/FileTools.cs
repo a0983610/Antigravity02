@@ -44,7 +44,7 @@ namespace OrchX.Tools
             }
         }
 
-        private bool IsPathAllowed(string targetPath, string allowedBasePath)
+        public bool IsPathAllowed(string targetPath, string allowedBasePath)
         {
             string fullTarget = Path.GetFullPath(targetPath);
             string fullAllowed = Path.GetFullPath(allowedBasePath);
@@ -366,12 +366,15 @@ namespace OrchX.Tools
                 string targetDir = Path.GetDirectoryName(destinationPath);
                 if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
 
-                if (File.Exists(destinationPath))
+                try
                 {
-                     return $"錯誤：目標檔案 {destinationFileName} 已存在。";
+                    File.Move(sourcePath, destinationPath, overwrite: false);
+                }
+                catch (IOException) when (File.Exists(destinationPath))
+                {
+                    return $"錯誤：目標檔案 {destinationFileName} 已存在。";
                 }
 
-                File.Move(sourcePath, destinationPath);
                 return $"成功：已將檔案 {sourceFileName} 搬移至 {destinationFileName}";
             }
             catch (Exception ex)
@@ -429,7 +432,7 @@ namespace OrchX.Tools
             string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
             int counter = 0;
             decimal number = (decimal)bytes;
-            while (Math.Round(number / 1024) >= 1)
+            while (Math.Round(number / 1024) >= 1 && counter < suffixes.Length - 1)
             {
                 number = number / 1024;
                 counter++;
