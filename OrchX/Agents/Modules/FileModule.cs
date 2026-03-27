@@ -34,7 +34,11 @@ namespace OrchX.Agents
             yield return client.CreateFunctionDeclaration(
                 "list_files",
                 "【檔案系統：列出目錄與檔案】以樹狀結構列出指定路徑的內容。預設為根目錄(限制於 AI_Workspace 內，最多往下掃描 3 層子目錄)。",
-                new { type = "object", properties = new { path = new { type = "string", description = "相對於 AI_Workspace 的資料夾路徑 (例如 / 或 notes)，留空代表根目錄" } } }
+                new { type = "object", properties = new { 
+                    path = new { type = "string", description = "相對於 AI_Workspace 的資料夾路徑 (例如 / 或 notes)，留空代表根目錄" },
+                    sortByTime = new { type = "boolean", description = "是否依據修改時間(由新到舊)排序 (預設為 false，依檔名排序)" },
+                    filePattern = new { type = "string", description = "限制檔案類型過濾，例如 *.cs 或是 text*.txt" }
+                } }
             );
 
             yield return client.CreateFunctionDeclaration(
@@ -82,15 +86,16 @@ namespace OrchX.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "delete_file",
-                "【檔案系統：刪除檔案】永久刪除單一檔案(限 AI_Workspace，無法刪除資料夾)。刪除後無法復原。",
+                "【檔案系統：刪除檔案或資料夾】永久刪除檔案或是整個資料夾(限 AI_Workspace)。刪除後無法復原，請謹慎使用。",
                 new
                 {
                     type = "object",
                     properties = new
                     {
-                        filePath = new { type = "string", description = "相對於 AI_Workspace 的檔案路徑 (例如 notes.txt)" }
+                        path = new { type = "string", description = "相對於 AI_Workspace 的檔案或資料夾路徑" },
+                        recursive = new { type = "boolean", description = "如果要刪除資料夾，是否連同裡面的所有檔案資源一併刪除。如果為 false 且資料夾不為空，會拒絕刪除 (預設為 false)" }
                     },
-                    required = new[] { "filePath" }
+                    required = new[] { "path" }
                 }
             );
 
@@ -170,7 +175,9 @@ namespace OrchX.Agents
         private string HandleListFiles(Dictionary<string, object> args)
         {
             string subPath = args.ContainsKey("path") ? args["path"].ToString() : "";
-            return _fileTools.ListFiles(subPath);
+            bool sortByTime = args.ContainsKey("sortByTime") && Convert.ToBoolean(args["sortByTime"]);
+            string filePattern = args.ContainsKey("filePattern") ? args["filePattern"].ToString() : "";
+            return _fileTools.ListFiles(subPath, sortByTime, filePattern);
         }
 
         private async Task<string> HandleReadFileAsync(string funcName, Dictionary<string, object> args)
@@ -274,7 +281,9 @@ namespace OrchX.Agents
             string errDel = CheckRequiredArgs(funcName, args);
             if (errDel != null) return errDel;
 
-            return _fileTools.DeleteFile(args["filePath"].ToString());
+            string targetPath = args["path"].ToString();
+            bool recursive = args.ContainsKey("recursive") && Convert.ToBoolean(args["recursive"]);
+            return _fileTools.DeleteFile(targetPath, recursive);
         }
 
         private string HandleMoveFile(string funcName, Dictionary<string, object> args)

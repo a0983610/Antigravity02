@@ -81,7 +81,7 @@ namespace OrchX.Tools
             return path;
         }
 
-        public string ListFiles(string subPath = "")
+        public string ListFiles(string subPath = "", bool sortByTime = false, string filePattern = "")
         {
             try
             {
@@ -107,7 +107,7 @@ namespace OrchX.Tools
 
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine($"[Folder Tree: {subPath}]");
-                BuildTree(targetPath, 0, 3, sb);
+                BuildTree(targetPath, 0, 3, sb, sortByTime, filePattern);
 
                 return sb.ToString();
             }
@@ -118,38 +118,50 @@ namespace OrchX.Tools
             }
         }
 
-        private void BuildTree(string currentPath, int currentDepth, int maxDepth, StringBuilder sb)
+        private void BuildTree(string currentPath, int currentDepth, int maxDepth, StringBuilder sb, bool sortByTime, string filePattern)
         {
             if (currentDepth >= maxDepth) return;
 
             try
             {
-                var entries = Directory.GetFileSystemEntries(currentPath);
                 string indent = new string(' ', currentDepth * 4);
+                
+                var dirInfoList = new List<DirectoryInfo>();
+                foreach (var d in Directory.GetDirectories(currentPath))
+                    dirInfoList.Add(new DirectoryInfo(d));
 
-                foreach (var entry in entries)
+                var fileInfoList = new List<FileInfo>();
+                string searchPattern = string.IsNullOrEmpty(filePattern) ? "*" : filePattern;
+                foreach (var f in Directory.GetFiles(currentPath, searchPattern))
+                    fileInfoList.Add(new FileInfo(f));
+
+                if (sortByTime)
                 {
-                    bool isDir = Directory.Exists(entry);
-                    string name = Path.GetFileName(entry);
-                    
-                    if (isDir)
-                    {
-                        DirectoryInfo di = new DirectoryInfo(entry);
-                        sb.AppendLine($"{indent}[DIR]  {name} (Created: {di.CreationTime:yyyy-MM-dd})");
-                        BuildTree(entry, currentDepth + 1, maxDepth, sb);
-                    }
-                    else
-                    {
-                        FileInfo fi = new FileInfo(entry);
-                        string sizeStr = FormatSize(fi.Length);
-                        // 對齊優化：檔名靠左30字元，大小靠右8字元
-                        sb.AppendLine($"{indent}[FILE] {name, -30} | {sizeStr, 8} | Mod: {fi.LastWriteTime:yyyy-MM-dd HH:mm}");
-                    }
+                    dirInfoList.Sort((a, b) => b.CreationTime.CompareTo(a.CreationTime));
+                    fileInfoList.Sort((a, b) => b.LastWriteTime.CompareTo(a.LastWriteTime));
+                }
+                else
+                {
+                    dirInfoList.Sort((a, b) => a.Name.CompareTo(b.Name));
+                    fileInfoList.Sort((a, b) => a.Name.CompareTo(b.Name));
+                }
+
+                foreach (var di in dirInfoList)
+                {
+                    sb.AppendLine($"{indent}[DIR]  {di.Name} (Created: {di.CreationTime:yyyy-MM-dd})");
+                    BuildTree(di.FullName, currentDepth + 1, maxDepth, sb, sortByTime, filePattern);
+                }
+
+                foreach (var fi in fileInfoList)
+                {
+                    string sizeStr = FormatSize(fi.Length);
+                    // 對齊優化：檔名靠左30字元，大小靠右8字元
+                    sb.AppendLine($"{indent}[FILE] {fi.Name, -30} | {sizeStr, 8} | Mod: {fi.LastWriteTime:yyyy-MM-dd HH:mm}");
                 }
                 
-                if (entries.Length == 0 && currentDepth == 0)
+                if (dirInfoList.Count == 0 && fileInfoList.Count == 0 && currentDepth == 0)
                 {
-                    sb.AppendLine("(此資料夾是空的)");
+                    sb.AppendLine("(此資料夾是空的或沒有符合的檔案)");
                 }
             }
             catch (UnauthorizedAccessException)
@@ -259,36 +271,59 @@ namespace OrchX.Tools
         }
 
         /// <summary>
-        /// 4. 刪除檔案 (限制範圍)
+        /// 4. 刪除檔案或資料夾 (限制範圍)
         /// </summary>
-        public string DeleteFile(string fileName)
+        public string DeleteFile(string path, bool recursive = false)
         {
             try
             {
                 // 自動移除 AI_Workspace 前綴 (若 AI 誤傳)
-                fileName = StripOutputFolderPrefix(fileName);
+                path = StripOutputFolderPrefix(path);
 
-                if (fileName.Contains("..")) return "錯誤：格式不合法。";
+                if (path.Contains("..")) return "錯誤：格式不合法。";
 
-                string aiWorkspacePath = Path.GetFullPath(Path.Combine(_baseDirectory, _aiOutputFolder));
-                string filePath = Path.GetFullPath(Path.Combine(aiWorkspacePath, fileName.TrimStart('/', '\\')));
-
-                // 安全檢查
-                if (!IsPathAllowed(filePath, aiWorkspacePath))
-                    return "錯誤：超出授權範圍，僅可刪除 AI_Workspace 內的檔案。";
-
-                if (!File.Exists(filePath))
+                // 防止刪除根目錄 (空路徑或只剩 / \ 的情況)
+                if (string.IsNullOrWhiteSpace(path) || path == "/" || path == "\\")
                 {
-                    return $"錯誤：找不到檔案 {fileName}。";
+                    return "錯誤：禁止刪除根目錄 AI_Workspace。";
                 }
 
-                File.Delete(filePath);
-                return $"成功：已刪除檔案 {fileName}";
+                string aiWorkspacePath = Path.GetFullPath(Path.Combine(_baseDirectory, _aiOutputFolder));
+                string targetPath = Path.GetFullPath(Path.Combine(aiWorkspacePath, path.TrimStart('/', '\\')));
+
+                // 再次確保不是根目錄 (比對解析後是否等同於 AI Workspace 根目錄)
+                if (targetPath.Equals(aiWorkspacePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return "錯誤：禁止刪除根目錄 AI_Workspace。";
+                }
+
+                // 安全檢查
+                if (!IsPathAllowed(targetPath, aiWorkspacePath))
+                    return "錯誤：超出授權範圍，僅可刪除 AI_Workspace 內的路徑。";
+
+                if (Directory.Exists(targetPath))
+                {
+                    if (!recursive && Directory.GetFileSystemEntries(targetPath).Length > 0)
+                    {
+                        return $"錯誤：資料夾 {path} 內部包含檔案或子資料夾，請使用 recursive=true 參數來強制刪除。";
+                    }
+                    Directory.Delete(targetPath, recursive);
+                    return $"成功：已刪除資料夾 {path}";
+                }
+                else if (File.Exists(targetPath))
+                {
+                    File.Delete(targetPath);
+                    return $"成功：已刪除檔案 {path}";
+                }
+                else
+                {
+                    return $"錯誤：找不到檔案或資料夾 {path}。";
+                }
             }
             catch (Exception ex)
             {
                 UsageLogger.LogError($"FileTools(DeleteFile) Error: {ex.Message}");
-                return $"錯誤：無法刪除檔案。{ex.Message}";
+                return $"錯誤：無法刪除路徑。{ex.Message}";
             }
         }
 
