@@ -63,7 +63,7 @@ namespace OrchX.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "read_skills",
-                "【技能管理：讀取技能清單】列出當前系統安裝的所有可用技能庫。背後實作邏輯：無須外界給定路徑，後台會寫死掃描 AI_Workspace/.agent/skills/ 目錄下各個技能資料夾中的 SKILL.md，重點回傳其結構化的名稱與功能描述。供 AI 檢視有哪些技能工具。",
+                "【技能管理：讀取技能清單】列出當前系統安裝的所有可用技能庫(位於 .agent/skills/)，回傳其結構化的名稱與功能描述。",
                 new
                 {
                     type = "object",
@@ -74,7 +74,7 @@ namespace OrchX.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "write_skill",
-                "【技能管理：新增/覆寫技能】建立 AI 專用的技能工作流擴充。背後實作邏輯：它會自動處理新建技能目錄，在 .agent/skills/{skillName}/ 之下建立或覆寫 SKILL.md，並按照系統要求的 YAML frontmatter 標準將 name 與 description 封裝寫入。適合將複雜的命令流程封裝為未來的標準 SOP。",
+                "【技能管理：新增/覆寫技能】建立 AI 專用技能工作流。自動建立資料夾與 YAML frontmatter，將複雜流程封裝為標準 SOP。",
                 new
                 {
                     type = "object",
@@ -91,7 +91,7 @@ namespace OrchX.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "write_note",
-                "【知識庫：寫入筆記】封存值得長期記憶的重要知識。背後實作邏輯：為了免除 AI 額外的建檔整理負擔，呼叫此工具後系統會強制把筆記存入 .agent/knowledge/ 目錄中，如果包含子路徑會自動遞迴建立資料夾；最方便的是，後端會『自動解析並增改』00_INDEX.md，這意味著只需要呼叫 write_note 就能全自動維護檢索索引庫，節省步驟。",
+                "【知識庫：寫入筆記】封存重要知識。檔案會自動存入 .agent/knowledge/ 並自動維護 00_INDEX.md 索引，無須額外手動管理。",
                 new
                 {
                     type = "object",
@@ -107,7 +107,7 @@ namespace OrchX.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "search_knowledge_index",
-                "【知識庫：檢索索引】快速查閱長期記憶庫的「總目錄」。背後實作邏輯：無須任何參數，後端直接讀取 .agent/knowledge/00_INDEX.md。這是一份由 write_note 自動生成的 Markdown 表格，協助 AI 在開始全新任務前能最快得知此前是否有留下共用的模組或踩坑經驗。",
+                "【知識庫：檢索索引】快速查閱長期記憶庫的「總目錄」(00_INDEX.md)。建議在開始新任務前呼叫，確認是否有現成共用模組或曾踩過的坑。",
                 new
                 {
                     type = "object",

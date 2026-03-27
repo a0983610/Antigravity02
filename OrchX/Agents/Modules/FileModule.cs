@@ -33,13 +33,13 @@ namespace OrchX.Agents
         {
             yield return client.CreateFunctionDeclaration(
                 "list_files",
-                "【檔案系統：列出目錄與檔案】以樹狀結構列出指定路徑的內容。背後實作邏輯：路徑會被安全限制在 AI_Workspace 沙盒內；為確保效能，最多只會往下掃描 3 層子目錄。未提供 path 時預設為根目錄。",
+                "【檔案系統：列出目錄與檔案】以樹狀結構列出指定路徑的內容。預設為根目錄(限制於 AI_Workspace 內，最多往下掃描 3 層子目錄)。",
                 new { type = "object", properties = new { path = new { type = "string", description = "相對於 AI_Workspace 的資料夾路徑 (例如 / 或 notes)，留空代表根目錄" } } }
             );
 
             yield return client.CreateFunctionDeclaration(
                 "read_file",
-                "【檔案系統：讀取檔案或圖片】讀取文字檔內容或解析圖片。背後實作邏輯：1. 若讀取圖片 (isImage=true)，系統會在後端將檔案轉 Base64 並直接注入 AI 的視覺輸入，隨即中斷該次回應來迫使 AI 在下一回合「看」到圖片，這導致圖片讀取『不能』與其他工具同時呼叫。2. 讀取文字時回傳完整內容。" + (_hasFastModel ? "3. 若帶有 summaryQuery，系統將啟動快速模型 (Fast Model) 先行總結龐大內容，避免 Token 爆量。" : ""),
+                "【檔案系統：讀取檔案或圖片】讀取文字檔或圖片。注意：若為圖片(isImage=true)，必須單獨呼叫本工具。讀取文字預設回傳完整內容。" + (_hasFastModel ? "若帶有 summaryQuery 將由快速模型先進行摘要。" : ""),
                 _hasFastModel
                     ? (object)new
                     {
@@ -66,7 +66,7 @@ namespace OrchX.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "write_file",
-                "【檔案系統：寫入檔案】建立新檔案或覆寫、附加內容至既有檔案。背後實作邏輯：預設 append=true 會將內容接在檔尾，若要完全覆蓋必須明確設為 append=false。若指定的相對路徑中包含尚不存在的子資料夾，系統會自動遞迴建立這些資料夾。所有的操作都被安全鎖定在 AI_Workspace 內。",
+                "【檔案系統：寫入檔案】建立、覆寫或附加內容至檔案。預設 append=true 附加於檔尾，若要完全覆寫請設為 false。自動遞迴建立不存在的資料夾(限 AI_Workspace)。",
                 new
                 {
                     type = "object",
@@ -82,7 +82,7 @@ namespace OrchX.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "delete_file",
-                "【檔案系統：刪除檔案】從磁碟中永久刪除單一檔案。背後實作邏輯：僅允許刪除 AI_Workspace 內的單獨檔案物件，無法刪除資料夾。刪除後無法復原，呼叫前必須確認目標明確。",
+                "【檔案系統：刪除檔案】永久刪除單一檔案(限 AI_Workspace，無法刪除資料夾)。刪除後無法復原。",
                 new
                 {
                     type = "object",
@@ -96,7 +96,7 @@ namespace OrchX.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "move_file",
-                "【檔案系統：移動/重新命名檔案】變更單一檔案的路徑或名稱。背後實作邏輯：本質是 File.Move，會在 AI_Workspace 內將檔案從來源路徑搬移至目標路徑，若目標資料夾不存在會自動建立，若目標檔案已存在會將其覆寫。",
+                "【檔案系統：移動/重新命名檔案】變更單一檔案的路徑或名稱(限 AI_Workspace)。目標資料夾不存在自動建立，檔案已存在會被覆寫。",
                 new
                 {
                     type = "object",
@@ -111,7 +111,7 @@ namespace OrchX.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "update_file_line",
-                "【檔案系統：單行更新】精準修改文字檔裡面的特定一行。背後實作邏輯：這是一個輕量級的操作，後端會將檔案全部讀入記憶體，找到對應行號(1-based)替換內容，然後覆寫回檔案。適合用於微調單一設定或小區塊，避免重新傳輸完整檔案的 write_file 所耗費的資源。",
+                "【檔案系統：單行更新】精準修改文字檔中的特定一行(1-based)。適合微調單一設定或小區塊，避免傳輸完整檔案。",
                 new
                 {
                     type = "object",
@@ -127,7 +127,7 @@ namespace OrchX.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "search_content",
-                "【檔案系統：內容全局搜尋】在所有文字檔案中全文檢索特定字串或正則表達式。背後實作邏輯：系統會掃描並列舉 path 限制下的所有檔案，為求效能過濾掉大於 10MB 的檔案以及常見的二進位檔案格式 (例如 .exe, .png, .zip)，進以快速找出匹配 query 的文本行與詳細行號；可帶入 contextLines 同時查看上下行文脈。支援 isRegex 參數以正則表達式進行搜索。",
+                "【檔案系統：內容全局搜尋】在文字檔中檢索特定字串或正則表達式(isRegex)。支援過濾路徑與副檔名，並可提供 contextLines 查看上下文。",
                 new
                 {
                     type = "object",
