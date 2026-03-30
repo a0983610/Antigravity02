@@ -689,11 +689,20 @@ namespace OrchX.Tools
 
         /// <summary>
         /// 寫入技能檔案，強制建立在 AI_Workspace/.agent/skills/{skillName}/SKILL.md
+        /// 支援基礎的 {{key}} 替換
         /// </summary>
-        public string WriteSkill(string skillName, string name, string description, string content)
+        public string WriteSkill(string skillName, string name, string description, string content, Dictionary<string, string> variables = null)
         {
             try
             {
+                if (variables != null)
+                {
+                    foreach (var kvp in variables)
+                    {
+                        content = content.Replace("{{" + kvp.Key + "}}", kvp.Value ?? "");
+                    }
+                }
+
                 // 過濾資料夾名稱，防止 Path Traversal
                 string safeSkillName = Path.GetFileName(skillName);
                 if (string.IsNullOrWhiteSpace(safeSkillName))

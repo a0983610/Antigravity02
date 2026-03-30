@@ -74,7 +74,7 @@ namespace OrchX.Agents
 
             yield return client.CreateFunctionDeclaration(
                 "write_skill",
-                "【技能管理：新增/覆寫技能】建立 AI 專用技能工作流。自動建立資料夾與 YAML frontmatter，將複雜流程封裝為標準 SOP。",
+                "【技能管理：新增/覆寫技能】建立 AI 專用技能工作流。自動建立資料夾與 YAML frontmatter，將複雜流程封裝為標準 SOP。支援 {{變數名稱}} 格式的簡單字串替換。",
                 new
                 {
                     type = "object",
@@ -83,7 +83,8 @@ namespace OrchX.Agents
                         skillName = new { type = "string", description = "技能所在的資料夾簡稱，限英數與破折號 (例如 build-tool)" },
                         name = new { type = "string", description = "技能的顯示名稱 (在 YAML frontmatter 中)" },
                         description = new { type = "string", description = "一句話簡述該技能的觸發時機或作用 (在 YAML frontmatter 中)" },
-                        content = new { type = "string", description = "此技能具體的 Markdown 循序執行步驟與指令細節內容" }
+                        content = new { type = "string", description = "此技能具體的 Markdown 循序執行步驟與指令細節內容，可使用 {{變數名稱}} 建立佔位符。" },
+                        variables = new { type = "object", description = "選填。提供鍵值對作為變數，系統會在寫入前將 content 中的 {{key}} 替換為對應的 value。" }
                     },
                     required = new[] { "skillName", "name", "description", "content" }
                 }
@@ -198,7 +199,28 @@ namespace OrchX.Agents
             string name = args["name"].ToString();
             string desc = args["description"].ToString();
             string content = args["content"].ToString();
-            return _fileTools.WriteSkill(sName, name, desc, content);
+
+            Dictionary<string, string> variables = null;
+            if (args.TryGetValue("variables", out object varsObj) && varsObj != null)
+            {
+                variables = new Dictionary<string, string>();
+                if (varsObj is IDictionary<string, object> dictObj)
+                {
+                    foreach (var kvp in dictObj)
+                    {
+                        variables[kvp.Key] = kvp.Value?.ToString() ?? "";
+                    }
+                }
+                else if (varsObj is System.Text.Json.JsonElement je && je.ValueKind == System.Text.Json.JsonValueKind.Object)
+                {
+                    foreach (var prop in je.EnumerateObject())
+                    {
+                        variables[prop.Name] = prop.Value.ToString();
+                    }
+                }
+            }
+
+            return _fileTools.WriteSkill(sName, name, desc, content, variables);
         }
 
         private string HandleWriteNote(string funcName, Dictionary<string, object> args)
