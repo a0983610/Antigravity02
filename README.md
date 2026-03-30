@@ -1,187 +1,133 @@
-# 🌌 OrchX: Universal AI Automation Agent
+# 🌌 OrchX: 萬能 AI 自動化代理系統
 
-OrchX 是一個基於 .NET 8.0 開發的高效能 C# AI Agent 系統。它不僅能與 Google Gemini API 進行對話，更核心的設計在於其「工具調度 (Tool Orchestration)」與「多專家協作 (Multi-Agent Collaboration)」能力，打造一個能自我優化、具備環境感知能力的自動化工作站。
+OrchX 是一個基於 C# (.NET 8.0) 開發的終端機 AI Agent 個人實驗專案。本系統整合了 Google Gemini API，核心專注於「工具調度 (Tool Orchestration)」與「多專家協作 (Multi-Agent Collaboration)」，旨在打造一個具備沙盒環境感知、動態工具呼叫與自我記憶管理能力的自動化工作流程。
 
 ## ✨ 核心特色
 
-### 1. 多專家協作生態 (Multi-Agent Ecosystem)
-透過 `consult_expert` 工具，主 Agent 可動態建立多位領域專家（如安全性專家、架構師、程式碼審查員）：
-* **獨立記憶**：每位專家擁有獨立的對話歷史與上下文，互不干擾。
-* **深層對話**：支援同步或非同步任務指派 (`is_async`)，並能進行多輪深度的往復討論，背景完成後可透過 `read_task_result` 讀取結果。
+* **多專家協作 (Multi-Agent Ecosystem):** 透過 `consult_expert` 工具，主 Agent 可以動態建立不同領域的專家（如架構師、程式碼審查員），支援獨立記憶與非同步背景任務執行 (`is_async`)，達成深度的多輪邏輯推演。
+* **雙模型動態切換 (Smart/Fast Models):** 系統內建 Smart (預設用於複雜推理) 與 Fast (預設用於快速摘要) 雙模型機制。AI 可視任務複雜度自動呼叫 `switch_model_mode` 切換思考模式，兼顧效能與 API 成本。
+* **模組化工具箱 (Modular Toolset):**
+    * **檔案系統 (FileModule):** 支援目錄樹檢視、大檔案自動摘要（透過 Fast Model 預處理）與精準的單行代碼修改 (`update_file_line`)。
+    * **終端機 (TerminalModule):** 支援執行白名單指令 (如 `python`, `npm`, `git`)。所有外部指令執行前皆會詳細列出目的，並需經使用者互動授權 (Y/N)，避免失控破壞。
+    * **網路通訊 (HttpModule):** 內建標準的 HTTP GET / POST 請求能力。
+* **自我進化與記憶管理 (Self-Evolution):** AI 能自行將標準化工作流程寫入 `.agent/skills/` 形成 SOP，並透過自動維護 `00_INDEX.md` 來管理 `.agent/knowledge/` 長期知識庫。
+* **自動歷史壓縮:** 當對話超過 Token 閾值（預設 10 萬 Token）時，系統會自動將前半段對話壓縮為結構化摘要，防止上下文溢出並保持高執行效能。
+* **Mock API 離線模式:** 內建資料錄製 (`/rmock`) 與回放功能，允許在無 API Key 的環境下進行離線開發與重構測試。
 
-### 2. 強大的模組化工具箱 (Modular Toolset)
-採用插件式架構，易於擴充：
-* **智慧檔案系統**：支援樹狀目錄檢視、大檔案自動摘要（Fast Model 預處理）及精準的單行修改 (`update_file_line`)。所有操作嚴格限制於 `AI_Workspace/` 沙盒內。
-* **環境與網路**：整合完整的 HTTP GET/POST 請求 (`HttpModule`)，並具備終端指令執行能力（受控的白名單與防護模式 `TerminalModule`）。
-* **技能學習**：AI 可自行建立與更新 `.agent/skills/` 下的 SOP 規範，實現能力的持續增長；並透過 `write_note` 全自動維護長期知識庫索引 (`00_INDEX.md`)。
+## 📁 專案架構
 
-### 3. 自動化與自癒能力
-* **雙模型動態切換**：內建 Smart (聰明) 與 Fast (快速) 雙模型機制，AI 可視任務複雜度自行切換。
-* **對話歷史壓縮**：當對話超過 Token 閾值（預設 80 萬 Token）時，自動觸發摘要壓縮以節省上下文空間。
-* **Mock API 模式**：在無 API Key 環境下可自動回放 `MockData/` 內容，或利用 `/rmock` 錄製真實 API 請求，方便離線開發測試。
-* **異常恢復**：發生嚴重錯誤或意外中斷時，系統會自動備份對話紀錄至 JSON 檔案。
+* `AIClient/`: 封裝 Gemini API 通訊底層，處理 Function Calling 解析與 429 Rate Limit 自動退避重試機制。
+* `Agents/`: 包含萬能主代理 (`ManagerAgent`) 與特定領域專家 (`ExpertAgent`) 的執行循環與狀態管理。
+* `Agents/Modules/`: 工具模組的實作介面 (File, Http, Terminal, AIControl, MultiAgent)，方便未來快速擴充新功能。
+* `AI_Workspace/`: AI 操作的實體沙盒隔離區。系統所有的技能、知識筆記與系統行為微調設定皆落在此目錄。
+* `Tools/`: 基礎設施工具，包含安全檔案 I/O、HTTP 封裝、非同步任務編排與錯誤 Log 記錄。
 
-## 📁 專案結構
+## 🚀 快速上手
 
-```text
-OrchX/
-├── AIClient/      # Gemini API 客戶端，處理 Function Calling 與 HTTP 429 退避
-├── Agents/        # Agent 核心邏輯與基底類別
-│   └── Modules/   # 功能模組 (File, Http, AIControl, MultiAgent, Terminal)
-├── AI_Workspace/  # AI 的沙盒作業區，包含 .agent 規則、技能與知識庫
-├── Config/        # 系統指令 (SystemInstruction) 與代理設定檔
-├── Tools/         # 底層工具 (JSON, File I/O, 日誌、非同步任務編排)
-└── UI/            # 抽象化 UI 介面與命令列自動完成輸入輔助
-```
+**環境需求:** 請確認系統已安裝 `.NET 8.0 SDK`。
 
-🛠️ 技術棧
-語言：C# 12.0+
+1.  **建置專案:**
+    ```bash
+    dotnet build -c Release
+    ```
+2.  **設定環境變數 (.env):**
+    首次執行 `dotnet run` 時會在根目錄自動產生 `.env` 檔案。請填寫您的 API 金鑰：
+    ```env
+    GEMINI_API_KEY=你的_API_KEY
+    GEMINI_SMART_MODEL=gemini-2.5-flash
+    GEMINI_FAST_MODEL=gemini-2.5-flash
+    ```
+3.  **啟動互動模式:**
+    ```bash
+    dotnet run
+    ```
+    *(備註：若未配置 API Key，系統啟動時會自動降級至 Mock API 模式，讀取 `MockData/` 內的預設回應資料以供測試。)*
 
-框架：.NET 8.0 (LTS)
+## ⌨️ 系統指令
 
-核心 AI：Google Gemini API (預設支援 gemini-2.5-flash)
+在終端機介面中，支援自動補全 (Tab) 與下列斜線系統指令：
 
-第三方庫：Newtonsoft.Json (高效能 JSON 序列化)、System.Net.Http、System.IO.Compression
+| 指令 | 說明 |
+| :--- | :--- |
+| `/help` | 顯示所有可用指令列表 |
+| `/new` | 清除當前對話歷史，開啟全新上下文 |
+| `/save [path]` | 將目前的對話歷史備份至 JSON 檔案 |
+| `/load [path]` | 從指定的 JSON 檔案載入對話歷史 |
+| `/time` | 開啟/關閉使用者訊息前的系統時間戳記 |
+| `/rmock` | 開關真實 API 回應錄製功能 (存放至 MockData) |
+| `/exit` | 安全結束程式 |
 
-🚀 快速上手
-環境準備：確保已安裝 .NET 8.0 SDK。
+## 🛡️ 安全性與防護限制
 
-配置金鑰：
-
-初次執行程式將自動於根目錄產生 .env 檔案。
-
-在 .env 中填入您的 GEMINI_API_KEY。
-
-建置並執行：
-dotnet build -c Release
-dotnet run
-(若無填寫 API Key，系統將自動進入 Mock API 離線測試模式)
-
-⌨️ 內建指令
-在對話視窗中，您可以使用以下斜線指令控制系統：
-指令,描述
-/help,顯示所有可用指令說明。
-/new,清除對話紀錄，開啟全新任務。
-/save [path],儲存目前對話歷史至指定路徑 (預設為 chat_history.json)。
-/load [path],載入先前的對話歷史檔案。
-/time,開啟或關閉使用者訊息的時間戳記。
-/rmock,切換是否錄製真實 API 回應為模擬資料。
-/exit,安全結束程式。
-
-🛡️ 開發品質與驗證 (Senior Dev Validator)
-本專案遵循資深開發驗證流程，確保程式碼高品質，所有歷史重大問題 (如記憶體洩漏、路徑穿越漏洞) 均已修復並記錄於 BUGS.md：
-
-🧠 思考與設計：所有異動需對齊 Clean Architecture 職責分離原則。
-
-🛠️ 執行狀態：嚴格執行 dotnet build 驗證與依賴檢查。
-
-🧪 測試與驗證：支援運行時驗證與自動化日誌追蹤 (logs/ Token 用量與 err/ 詳細 API 錯誤追蹤)。
-
-Copyright © 2026 Antigravity Project
+本系統在設計上融入了嚴格的邊界檢查：
+* **路徑穿越防護 (Path Traversal):** 所有的 `FileModule` 操作皆經過絕對路徑驗證，確保 AI 永遠無法存取或修改 `AI_Workspace/` 以外的實體系統檔案。
+* **受限的執行環境:** `TerminalModule` 內建正則與前綴檢查，封鎖了 `>`、`|`、`&` 等串接符號及高風險指令 (如未帶 `--ignore-scripts` 的 `npm install`)。
+* **例外自動備份:** 發生系統異常或手動強制中斷 (Ctrl+C) 時，對話狀態會自動 Dump 出來，避免重要思考進度遺失。
 
 ---
 
 # 🌌 OrchX: Universal AI Automation Agent
 
-OrchX is a high-performance C# AI Agent system built on .NET 8.0. More than just a chatbot interface for the Google Gemini API, its core design focuses on **Tool Orchestration** and **Multi-Agent Collaboration**, creating a self-optimizing, environment-aware automation workstation.
+OrchX is a terminal-based AI Agent personal experimental project built with C# (.NET 8.0). Integrating the Google Gemini API, its core focuses on **Tool Orchestration** and **Multi-Agent Collaboration**, aiming to create an automated workflow with sandbox environment awareness, dynamic tool calling, and self-memory management.
 
 ## ✨ Key Features
 
-### 1. Multi-Agent Ecosystem
-Through the `consult_expert` tool, the main Agent can dynamically spawn specialized experts (e.g., Security Expert, Architect, Code Reviewer):
-* **Independent Memory**: Each expert maintains its own isolated conversation history and context.
-* **Deep Reasoning**: Supports both synchronous and asynchronous (`is_async`) task assignments for rigorous back-and-forth discussions. Background tasks can be retrieved later using `read_task_result`.
-
-### 2. Powerful Modular Toolset
-Built with a pluggable architecture for seamless expansion:
-* **Smart File System**: Features tree-view directory exploration, automatic large-file summarization (via Fast Model), and precise line-by-line updates (`update_file_line`). All operations are safely sandboxed within the `AI_Workspace/` directory.
-* **Environment & Network**: Integrates full HTTP GET/POST requests (`HttpModule`) and terminal command execution via a strictly controlled whitelist mode (`TerminalModule`).
-* **Skill Acquisition**: The AI can independently create and update SOPs under `.agent/skills/`, allowing for continuous capability growth, and automatically maintain a long-term knowledge index (`00_INDEX.md`) using `write_note`.
-
-### 3. Automation & Self-Healing
-* **Dual-Model Switching**: Dynamically switches between "Smart" and "Fast" models at runtime based on task complexity.
-* **History Compression**: Automatically triggers summary compression when the conversation exceeds token thresholds (default 800k) to save context space.
-* **Mock API Mode**: Automatically replays mock data from `MockData/` when no API Key is available, or records real API responses via `/rmock` to facilitate offline development.
-* **Failure Recovery**: Automatically backs up chat history to JSON files during critical errors or manual interruptions.
+* **Multi-Agent Ecosystem:** Through the `consult_expert` tool, the main Agent can dynamically spawn specialized experts (e.g., Architect, Code Reviewer). It supports independent memory and asynchronous background task execution (`is_async`) for deep, multi-turn reasoning.
+* **Dual-Model Dynamic Switching:** Built-in support for "Smart" (for complex reasoning) and "Fast" (for quick summaries) models. The AI can automatically call `switch_model_mode` to toggle its thinking mode based on task complexity, balancing performance and API costs.
+* **Modular Toolset:**
+    * **File System (FileModule):** Supports directory tree viewing, automatic large-file summarization (via the Fast Model), and precise single-line code updates (`update_file_line`).
+    * **Terminal (TerminalModule):** Executes whitelisted commands (e.g., `python`, `npm`, `git`). All external commands are presented with their purpose and require explicit user authorization (Y/N) before execution to prevent unintended actions.
+    * **Network (HttpModule):** Built-in standard HTTP GET / POST request capabilities.
+* **Self-Evolution & Memory Management:** The AI can independently write standardized workflows into `.agent/skills/` as SOPs and automatically maintain a long-term knowledge base index (`00_INDEX.md`) under `.agent/knowledge/`.
+* **Auto History Compression:** When the conversation exceeds the token threshold (default 100k tokens), the system automatically compresses the earlier half of the chat into a structured summary to prevent context overflow and maintain high performance.
+* **Mock API Offline Mode:** Features built-in data recording (`/rmock`) and playback, allowing for offline development and refactoring tests without an API Key.
 
 ## 📁 Project Structure
 
-```text
-OrchX/
-├── AIClient/      # Gemini API client, handles Function Calling and HTTP 429 backoff
-├── Agents/        # Core Agent logic and base classes
-│   └── Modules/   # Functional modules (File, Http, AIControl, MultiAgent, Terminal)
-├── AI_Workspace/  # AI sandbox area, containing .agent rules, skills, and knowledge base
-├── Config/        # System instructions and agent configurations
-├── Tools/         # Low-level utilities (JSON, File I/O, Logging, Task Orchestrator)
-└── UI/            # Abstraction for UI interfaces and auto-complete input helpers
-```
+* `AIClient/`: Encapsulates the Gemini API communication layer, handling Function Calling parsing and 429 Rate Limit auto-backoff retries.
+* `Agents/`: Contains the execution loops and state management for the universal `ManagerAgent` and specific `ExpertAgent`s.
+* `Agents/Modules/`: Implementation interfaces for tool modules (File, Http, Terminal, AIControl, MultiAgent) for easy future expansion.
+* `AI_Workspace/`: The physical sandbox isolation area for AI operations. All skills, knowledge notes, and system behavior tweaks reside here.
+* `Tools/`: Infrastructure utilities including safe file I/O, HTTP wrappers, async task orchestration, and error logging.
 
-🛠️ Tech Stack
-Language: C# 12.0+
+## 🚀 Getting Started
 
-Framework: .NET 8.0 (Updated to the latest LTS version)
+**Prerequisites:** Ensure the `.NET 8.0 SDK` is installed.
 
-Core AI: Google Gemini API (Defaults to gemini-2.5-flash)
+1.  **Build the Project:**
+    ```bash
+    dotnet build -c Release
+    ```
+2.  **Configure Environment Variables (.env):**
+    Running `dotnet run` for the first time will automatically generate a `.env` file in the root directory. Please fill in your API key:
+    ```env
+    GEMINI_API_KEY=your_api_key_here
+    GEMINI_SMART_MODEL=gemini-2.5-flash
+    GEMINI_FAST_MODEL=gemini-2.5-flash
+    ```
+3.  **Start Interactive Mode:**
+    ```bash
+    dotnet run
+    ```
+    *(Note: If no API Key is configured, the system will automatically fall back to Mock API mode on startup, reading default responses from `MockData/` for testing purposes.)*
 
-Third-party Libraries: Newtonsoft.Json (High-performance JSON serialization), System.Net.Http, System.IO.Compression
+## ⌨️ System Commands
 
-🚀 Getting Started
-Prerequisites: Ensure the .NET 8.0 SDK is installed.
+The terminal interface supports auto-completion (Tab) and the following slash system commands:
 
-Configuration:
+| Command | Description |
+| :--- | :--- |
+| `/help` | Lists all available commands |
+| `/new` | Clears the current chat history, starting a fresh context |
+| `/save [path]` | Backs up the current chat history to a JSON file |
+| `/load [path]` | Loads chat history from a specified JSON file |
+| `/time` | Toggles the system timestamp before user messages |
+| `/rmock` | Toggles the recording of real API responses (saved to MockData) |
+| `/exit` | Safely closes the program |
 
-Run the program for the first time to automatically generate a .env file in the root directory.
+## 🛡️ Security & Sandboxing
 
-Fill in your GEMINI_API_KEY in the .env file.
-
-Build & Run:
-dotnet build -c Release
-dotnet run
-
-(If no API Key is provided, the system will seamlessly fall back to offline Mock API Mode)
-
-⌨️ Built-in Commands
-Use the following slash commands within the dialogue window to control the system:
-
-Command,Description
-/help,Lists all available command descriptions.
-/new,Clears chat history and starts a fresh session.
-/save [path],Saves current chat history to a specified path (default: chat_history.json).
-/load [path],Loads a previous chat history file.
-/time,Toggles timestamps for user messages.
-/rmock,Toggles recording of real API responses as mock data.
-/exit,Safely closes the program.
-
-🛡️ Senior Dev Validator & Quality
-This project follows professional senior development validation processes to ensure code quality. All major historical issues (e.g., resource leaks, path traversal vulnerabilities) have been patched and documented in BUGS.md:
-
-🧠 Design & Thinking: All changes align with Clean Architecture principles and strict separation of concerns.
-
-🛠️ Compilation Status: Verified through strict dotnet build execution.
-
-🧪 Verification: Supports comprehensive runtime validation and automated log tracking (Token usage in logs/ and detailed API error dumps in err/).
-
-Copyright © 2026 Antigravity Project
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+This system is designed with strict boundary checks:
+* **Path Traversal Protection:** All `FileModule` operations undergo absolute path validation, ensuring the AI can never access or modify physical system files outside of `AI_Workspace/`.
+* **Restricted Execution Environment:** The `TerminalModule` features built-in regex and prefix checks, blocking chaining operators like `>`, `|`, `&` and high-risk commands (e.g., `npm install` without `--ignore-scripts`).
+* **Exception Auto-Backup:** In the event of a system crash or manual interruption (Ctrl+C), the conversation state is automatically dumped to prevent the loss of important reasoning progress.
