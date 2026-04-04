@@ -37,8 +37,11 @@ namespace OrchX.Agents
                 "list_files",
                 "File System: List contents of a directory. Returns entries in a tree structure. Default is the root directory (restricted to AI_Workspace, scans up to 3 levels deep).",
                 new { type = "object", properties = new { 
+                    // 相對於 AI_Workspace 的資料夾路徑
                     path = new { type = "string", description = "Folder path relative to AI_Workspace (e.g., '/' or 'notes'). Empty string means root." },
+                    // 是否依修改時間降序排序 (預設為 false)
                     sortByTime = new { type = "boolean", description = "Whether to sort by modified time descending (Default: false, sorts by name)" },
+                    // 檔案過濾條件 (如 '*.cs')
                     filePattern = new { type = "string", description = "Filter for file types, e.g., '*.cs' or 'text*.txt'" }
                 } }
             );
@@ -55,8 +58,11 @@ namespace OrchX.Agents
                         type = "object",
                         properties = new
                         {
+                            // 檔案路徑
                             filePath = new { type = "string", description = "Path relative to AI_Workspace" },
+                            // 摘要需求 (會觸發快速模型處理重點)
                             summaryQuery = new { type = "string", description = "Only read focal points matching this query (triggers fast AI model processing)" },
+                            // 是否解析為圖片 (若為 true 則必須單獨呼叫)
                             isImage = new { type = "boolean", description = "Whether to parse as an image (Must be called alone if true)" }
                         },
                         required = new[] { "filePath" }
@@ -66,7 +72,9 @@ namespace OrchX.Agents
                         type = "object",
                         properties = new
                         {
+                            // 檔案路徑
                             filePath = new { type = "string", description = "Path relative to AI_Workspace" },
+                            // 是否解析為圖片
                             isImage = new { type = "boolean", description = "Whether to parse as an image (Must be called alone if true)" }
                         },
                         required = new[] { "filePath" }
@@ -83,8 +91,11 @@ namespace OrchX.Agents
                     type = "object",
                     properties = new
                     {
+                        // 檔案存取路徑
                         filePath = new { type = "string", description = "Path relative to AI_Workspace (e.g., 'notes.txt')" },
+                        // 欲寫入的字串內容
                         content = new { type = "string", description = "The string content to write" },
+                        // true: 附加於末尾；false: 覆寫全檔
                         append = new { type = "boolean", description = "true (default): append to end; false: overwrite entire file" }
                     },
                     required = new[] { "filePath", "content" }
@@ -101,9 +112,13 @@ namespace OrchX.Agents
                     type = "object",
                     properties = new
                     {
+                        // 檔案路徑
                         filePath = new { type = "string", description = "Path relative to AI_Workspace (e.g., 'settings.json')" },
+                        // 起始行號 (從 1 開始)
                         startLine = new { type = "integer", description = "The 1-based start line number to modify" },
+                        // 結束行號 (包含該行)
                         endLine = new { type = "integer", description = "The 1-based end line number to modify (inclusive). Set to startLine for single line replacement." },
+                        // 替換後的新內容
                         newContent = new { type = "string", description = "The replacement content for the specified lines" }
                     },
                     required = new[] { "filePath", "startLine", "endLine", "newContent" }
@@ -120,10 +135,15 @@ namespace OrchX.Agents
                     type = "object",
                     properties = new
                     {
+                        // 搜尋關鍵字或正規表達式
                         query = new { type = "string", description = "The exact keyword or regular expression to search for" },
+                        // 要搜尋的子目錄 (預設為全域工作區)
                         path = new { type = "string", description = "Subdirectory to search (Default: global workspace search)" },
+                        // 限制檔案類型 (如 '*.cs')
                         filePattern = new { type = "string", description = "Limit to file types, e.g., '*.cs' or '*.log'" },
+                        // 匹配行前後的上下文行數
                         contextLines = new { type = "integer", description = "Number of lines of context to include before and after the match (Default: 0)" },
+                        // 是否將 query 視為正規表達式
                         isRegex = new { type = "boolean", description = "Whether to treat query as a regular expression (Default: false)" }
                     },
                     required = new[] { "query" }

@@ -32,8 +32,11 @@ namespace OrchX.Agents
                                 type = "object",
                                 properties = new
                                 {
+                                    // 欲執行的 CMD 指令
                                     command = new { type = "string", description = "The CMD terminal command to execute" },
+                                    // 執行此指令的高階理由與動機
                                     reason = new { type = "string", description = "Why do you need to execute this command?" },
+                                    // 此指令的具體功能與參數詳解
                                     explanation = new { type = "string", description = "What does this command specifically do? (Detailed explanation of parameters)" }
                                 },
                                 required = new[] { "command", "reason", "explanation" }

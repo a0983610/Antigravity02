@@ -42,9 +42,13 @@ namespace OrchX.Agents
                     type = "object",
                     properties = new
                     {
+                        // 專家標識符 (如 'security_expert')
                         expert_name = new { type = "string", description = "Identifier for the expert (e.g., 'security_expert', 'arch_expert')" },
+                        // 提問給專家的具體問題或任務
                         question = new { type = "string", description = "The specific question or task for the expert" },
+                        // 專家的系統指令 (建立新專家時必填)
                         role = new { type = "string", description = "System Instruction for the expert. Required for new experts, optional for follow-ups." },
+                        // 是否非同步執行 (若為 true 則立即回傳 TaskId)
                         is_async = new { type = "boolean", description = "If true, runs in background and returns a TaskId immediately. Set to true for time-consuming tasks." }
                     },
                     required = new[] { "expert_name", "question" }
@@ -61,6 +65,7 @@ namespace OrchX.Agents
                     type = "object",
                     properties = new
                     {
+                        // 唯一的任務標識符
                         taskId = new { type = "string", description = "The unique task identifier" }
                     },
                     required = new[] { "taskId" }
@@ -89,6 +94,7 @@ namespace OrchX.Agents
                     type = "object",
                     properties = new
                     {
+                        // 欲結束的專家名稱
                         expert_name = new { type = "string", description = "Identification name of the expert to dismiss" }
                     },
                     required = new[] { "expert_name" }

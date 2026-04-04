@@ -25,7 +25,9 @@ namespace OrchX.Agents
                     type = "object",
                     properties = new
                     {
+                        // 目標 URL
                         url = new { type = "string", description = "The target URL" },
+                        // 選填。代表請求標頭的 JSON 字串
                         headers = new { type = "string", description = "Optional. JSON string representing request headers (e.g., '{\"Authorization\": \"Bearer ...\"}')" }
                     },
                     required = new[] { "url" }
@@ -42,9 +44,13 @@ namespace OrchX.Agents
                     type = "object",
                     properties = new
                     {
+                        // 目標 URL
                         url = new { type = "string", description = "The target URL" },
+                        // 欲傳送的內容 (通常為 JSON 字串)
                         body = new { type = "string", description = "The content to send (typically a JSON string)" },
+                        // 選填。內容類型 (預設為 'application/json')
                         contentType = new { type = "string", description = "Optional. Default: 'application/json'" },
+                        // 選填。代表請求標頭的 JSON 字串
                         headers = new { type = "string", description = "Optional. JSON string representing request headers" }
                     },
                     required = new[] { "url", "body" }

@@ -40,6 +40,7 @@ namespace OrchX.Agents
                         type = "object",
                         properties = new
                         {
+                            // 目標模式：'smart' (高推理) 或 'fast' (高效能)
                             mode = new { type = "string", description = "Target mode: 'smart' (Reasoning) or 'fast' (Efficiency)", @enum = new[] { "smart", "fast" } }
                         },
                         required = new[] { "mode" }
@@ -57,8 +58,11 @@ namespace OrchX.Agents
                     type = "object",
                     properties = new
                     {
+                        // 調整原因：描述觀察到的問題或改進建議
                         reason = new { type = "string", description = "Reason for the adjustment. Describe the observed problem or potential improvement." },
+                        // 提議更新的指令具體內容
                         proposed_change = new { type = "string", description = "Specific instruction content to be added or modified." },
+                        // 操作：'append' (附加) 或 'replace' (覆寫)
                         action = new { type = "string", description = "Whether to append to the existing instructions or replace them.", @enum = new[] { "append", "replace" } }
                     },
                     required = new[] { "reason", "proposed_change", "action" }
@@ -88,10 +92,15 @@ namespace OrchX.Agents
                     type = "object",
                     properties = new
                     {
+                        // 技能資料夾名稱 (僅限字母、數字與連字號，如 'build-tool')
                         skillName = new { type = "string", description = "Short folder name for the skill (alphanumeric and dashes only, e.g., 'build-tool')" },
+                        // 技能顯示名稱 (出現於 YAML 前置資料)
                         name = new { type = "string", description = "Display name of the skill (in YAML frontmatter)" },
+                        // 技能用途摘要 (出現於 YAML 前置資料)
                         description = new { type = "string", description = "One-sentence summary of when to use this skill (in YAML frontmatter)" },
+                        // 詳細的 Markdown 執行步驟與指令，支援 {{variable}} 變數
                         content = new { type = "string", description = "The detailed Markdown execution steps and instructions. Use {{variable}} for placeholders." },
+                        // 選填。用於替換內容中 {{key}} 的鍵值對
                         variables = new { type = "object", description = "Optional. Key-value pairs to replace {{key}} in the content during writing." }
                     },
                     required = new[] { "skillName", "name", "description", "content" }
@@ -108,8 +117,11 @@ namespace OrchX.Agents
                     type = "object",
                     properties = new
                     {
+                        // 筆記檔名或相對路徑 (例如 'React_Best_Practices.md')
                         title = new { type = "string", description = "Relative filename or path for the note (e.g., 'React_Best_Practices.md' or 'subfolder/note.md')" },
+                        // 紀錄於索引檔 (00_INDEX.md) 的摘要說明
                         description = new { type = "string", description = "Short summary of the content to be recorded in 00_INDEX.md" },
+                        // 知識筆記的完整內容
                         content = new { type = "string", description = "Full text content of the knowledge note." }
                     },
                     required = new[] { "title", "description", "content" }
