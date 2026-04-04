@@ -60,6 +60,7 @@ namespace OrchX.UI
                 int currentTop = Console.CursorTop;
                 int maxTopForBuffer = Console.BufferHeight - 1;
                 
+                int originalLeft = Console.CursorLeft;
                 // 確保底部有足夠空間，避免繪製 Hint 時視窗捲動導致 promptTop 失效
                 if (currentTop + requiredSpace > maxTopForBuffer)
                 {
@@ -68,10 +69,10 @@ namespace OrchX.UI
                     {
                         Console.WriteLine();
                     }
-                    Console.SetCursorPosition(Console.CursorLeft, Console.CursorTop - linesToPush);
+                    Console.SetCursorPosition(originalLeft, Console.CursorTop - linesToPush);
                 }
 
-                int promptLeft = Console.CursorLeft;
+                int promptLeft = originalLeft;
                 int promptTop = Console.CursorTop;
 
                 var input = new System.Text.StringBuilder();
