@@ -60,7 +60,10 @@ namespace OrchX.Agents
         private bool _modelSwitchHappenedInThisTurn = false; // 追蹤此輪是否觸發模型切換
 
         // 動態開關時間戳記
-        public bool EnableTimestampHeader { get; set; } = true;
+        public bool EnableTimestampHeader { get; set; } = false;
+
+        // 是否附加系統環境與工作區等固定資訊 (預設不加)
+        public bool EnableSystemFixedInfo { get; set; } = false;
         
         // 歷史紀錄壓縮 Token 閾值
         public int TokenThresholdForCompression { get; set; } = 100000;
@@ -179,11 +182,14 @@ namespace OrchX.Agents
 
             try
             {
-                string additionalInfo = BuildSystemFixedInfo();
-                if (!string.IsNullOrWhiteSpace(additionalInfo))
+                if (EnableSystemFixedInfo)
                 {
-                    requestContents.Add(Client.BuildMessageContent("model", "請問目前的系統狀態與環境資訊為何？"));
-                    requestContents.Add(Client.BuildMessageContent("user", additionalInfo));
+                    string additionalInfo = BuildSystemFixedInfo();
+                    if (!string.IsNullOrWhiteSpace(additionalInfo))
+                    {
+                        requestContents.Add(Client.BuildMessageContent("model", "請問目前的系統狀態與環境資訊為何？"));
+                        requestContents.Add(Client.BuildMessageContent("user", additionalInfo));
+                    }
                 }
             }
             catch (Exception)

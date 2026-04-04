@@ -116,7 +116,7 @@ namespace OrchX.Agents
 
             if (missing.Count > 0)
             {
-                errorMessage = $"Error: Missing or empty required argument(s): {string.Join(", ", missing)}.";
+                errorMessage = $"System Error: Missing or empty required argument(s): {string.Join(", ", missing)}. ACTION REQUIRED: You must immediately use the tool calling syntax to invoke this tool again with the corrected parameters. Do not apologize in plain text.";
                 return false;
             }
 
