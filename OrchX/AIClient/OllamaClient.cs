@@ -46,6 +46,7 @@ namespace OrchX.AIClient
             }
 
             var json = JsonTools.Serialize(requestBody);
+            TestRecordManager.RecordRequest(json);
             
             int maxRetries = 3;
             int currentRetry = 0;
@@ -66,6 +67,8 @@ namespace OrchX.AIClient
                         responseJson = await response.Content.ReadAsStringAsync();
                         if (response.IsSuccessStatusCode)
                         {
+                            TestRecordManager.RecordResponse(responseJson);
+
                             var dict = JsonTools.Deserialize<Dictionary<string, object>>(responseJson);
                             if (dict == null || !dict.ContainsKey("message"))
                             {

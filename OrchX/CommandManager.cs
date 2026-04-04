@@ -102,6 +102,16 @@ namespace OrchX
                 Console.WriteLine($"[System] Record mock data is now {status}.");
                 Console.ResetColor();
             });
+
+            RegisterCommand("/test", "切換是否將 API 的 Request 與 Response 儲存為測試紀錄", (string args, BaseAgent agent, out bool shouldExit) =>
+            {
+                shouldExit = false;
+                OrchX.Tools.TestRecordManager.IsRecordingTest = !OrchX.Tools.TestRecordManager.IsRecordingTest;
+                string status = OrchX.Tools.TestRecordManager.IsRecordingTest ? "ON" : "OFF";
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"[System] Test record is now {status}.");
+                Console.ResetColor();
+            });
         }
 
         public static void RegisterCommand(string name, string description, CommandHandler handler)

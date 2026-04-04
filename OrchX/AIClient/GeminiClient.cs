@@ -47,6 +47,8 @@ namespace OrchX.AIClient
             };
 
             var json = JsonTools.Serialize(requestBody);
+            TestRecordManager.RecordRequest(json);
+            
             int maxRetries = 3;
             int currentRetry = 0;
             int delayMs = 2000;
@@ -62,6 +64,8 @@ namespace OrchX.AIClient
                     responseJson = await response.Content.ReadAsStringAsync();
                     if (response.IsSuccessStatusCode)
                     {
+                        TestRecordManager.RecordResponse(responseJson);
+                        
                         if (MockDataManager.IsRecordingMockData)
                         {
                             string providerName = request.MockProviderName ?? "gemini";
