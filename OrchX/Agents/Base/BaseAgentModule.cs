@@ -73,16 +73,44 @@ namespace OrchX.Agents
         public abstract Task<string> TryHandleToolCallAsync(string funcName, Dictionary<string, object> args, IAgentUI ui, System.Threading.CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 檢查工具呼叫是否包含所有的必要參數，且不為空值
+        /// 檢查工具呼叫是否包含所有的必要參數，且不為空值。
+        /// 若缺少必要參數，會嘗試比對常見的 AI 幻覺別名 (Aliases) 進行自動修復。
         /// </summary>
         protected bool ValidateRequiredArgs(Dictionary<string, object> args, string[] requiredParams, out string errorMessage)
         {
+            var aliasMapping = new Dictionary<string, string[]>
+            {
+                { "filePath", new[] { "path", "file", "filename", "file_path", "sourcePath", "destinationPath" } },
+                { "sourcePath", new[] { "source", "source_path", "from", "src", "path" } },
+                { "destinationPath", new[] { "destination", "destination_path", "to", "dest", "targetPath", "target" } },
+                { "query", new[] { "search", "keyword", "text", "q" } },
+                { "content", new[] { "text", "data", "body", "newContent" } },
+                { "newContent", new[] { "content", "text", "data" } }
+            };
+
             var missing = new List<string>();
             foreach (var p in requiredParams)
             {
                 if (!args.ContainsKey(p) || args[p] == null || string.IsNullOrWhiteSpace(args[p].ToString()))
                 {
-                    missing.Add(p);
+                    bool fixedViaAlias = false;
+                    if (aliasMapping.ContainsKey(p))
+                    {
+                        foreach (var alias in aliasMapping[p])
+                        {
+                            if (args.ContainsKey(alias) && args[alias] != null && !string.IsNullOrWhiteSpace(args[alias].ToString()))
+                            {
+                                args[p] = args[alias]; // 自動修復參數名稱
+                                fixedViaAlias = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!fixedViaAlias)
+                    {
+                        missing.Add(p);
+                    }
                 }
             }
 

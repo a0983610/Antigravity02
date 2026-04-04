@@ -151,12 +151,23 @@ namespace OrchX.AIClient
                     var tc = JsonTools.Deserialize<Dictionary<string, object>>(tcString);
                     if (tc != null && tc.ContainsKey("function") && tc["function"] is Dictionary<string, object> func)
                     {
+                        var rawArgs = func.ContainsKey("arguments") ? func["arguments"] : null;
+                        var parsedArgs = new Dictionary<string, object>();
+                        if (rawArgs is Dictionary<string, object> dictArgs)
+                        {
+                            parsedArgs = dictArgs;
+                        }
+                        else if (rawArgs is string strArgs && !string.IsNullOrWhiteSpace(strArgs))
+                        {
+                            try { parsedArgs = JsonTools.Deserialize<Dictionary<string, object>>(strArgs) ?? new Dictionary<string, object>(); } catch { }
+                        }
+
                         var functionCall = new Dictionary<string, object>
                         {
                             { "functionCall", new Dictionary<string, object>
                                 {
                                     { "name", func.ContainsKey("name") ? func["name"] : "" },
-                                    { "args", func.ContainsKey("arguments") ? func["arguments"] : new Dictionary<string, object>() }
+                                    { "args", parsedArgs }
                                 }
                             }
                         };
