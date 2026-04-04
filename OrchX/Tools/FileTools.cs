@@ -328,9 +328,9 @@ namespace OrchX.Tools
         }
 
         /// <summary>
-        /// 5. 修改檔案指定行數
+        /// 5. 修改檔案指定多行範圍
         /// </summary>
-        public string UpdateFileLine(string fileName, int lineNumber, string newContent)
+        public string UpdateFileLines(string fileName, int startLine, int endLine, string newContent)
         {
             try
             {
@@ -353,20 +353,30 @@ namespace OrchX.Tools
 
                 List<string> lines = new List<string>(File.ReadAllLines(filePath, Encoding.UTF8));
 
-                if (lineNumber < 1 || lineNumber > lines.Count)
+                if (startLine < 1 || startLine > lines.Count + 1 || endLine < startLine)
                 {
-                    return $"錯誤：行號 {lineNumber} 超出範圍 (總行數: {lines.Count})。";
+                    return $"錯誤：行號範圍無效或超出範圍 (總行數: {lines.Count})。";
                 }
 
-                // 修改指定行 (index = lineNumber - 1)
-                lines[lineNumber - 1] = newContent;
+                int removeCount = Math.Min(endLine - startLine + 1, Math.Max(0, lines.Count - startLine + 1));
+                if (removeCount > 0 && startLine <= lines.Count)
+                {
+                    lines.RemoveRange(startLine - 1, removeCount);
+                }
+
+                string[] newLines = newContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                lines.InsertRange(startLine - 1, newLines);
 
                 File.WriteAllLines(filePath, lines, Encoding.UTF8);
-                return $"成功：已修改 {fileName} 第 {lineNumber} 行。";
+                if (startLine == endLine)
+                {
+                    return $"成功：已修改 {fileName} 第 {startLine} 行。";
+                }
+                return $"成功：已修改 {fileName} 第 {startLine}~{endLine} 行。";
             }
             catch (Exception ex)
             {
-                UsageLogger.LogError($"FileTools(UpdateFileLine) Error: {ex.Message}");
+                UsageLogger.LogError($"FileTools(UpdateFileLines) Error: {ex.Message}");
                 return $"錯誤：無法修改檔案。{ex.Message}";
             }
         }

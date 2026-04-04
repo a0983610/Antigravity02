@@ -91,21 +91,22 @@ namespace OrchX.Agents
                 }
             );
 
-            // 【檔案系統：單行更新】
-            // 精準修改指定行號 (1-based)。適合小型設定檔之微調。
+            // 【檔案系統：多行更新】
+            // 精準修改指定行號範圍 (1-based)。可以是一行或多行替換。
             yield return client.CreateFunctionDeclaration(
-                "update_file_line",
-                "File System: Single Line Update. Precisely modify a specific line (1-based index). Efficient for fine-tuning configuration or small blocks without sending the full file.",
+                "update_file_lines",
+                "File System: Multi-line Update. Precisely modify a range of lines (1-based index). Efficient for fine-tuning or replacing blocks without sending the full file.",
                 new
                 {
                     type = "object",
                     properties = new
                     {
                         filePath = new { type = "string", description = "Path relative to AI_Workspace (e.g., 'settings.json')" },
-                        lineNumber = new { type = "integer", description = "The 1-based absolute line number to modify" },
-                        newContent = new { type = "string", description = "The replacement content for the line" }
+                        startLine = new { type = "integer", description = "The 1-based start line number to modify" },
+                        endLine = new { type = "integer", description = "The 1-based end line number to modify (inclusive). Set to startLine for single line replacement." },
+                        newContent = new { type = "string", description = "The replacement content for the specified lines" }
                     },
-                    required = new[] { "filePath", "lineNumber", "newContent" }
+                    required = new[] { "filePath", "startLine", "endLine", "newContent" }
                 }
             );
 
@@ -140,8 +141,8 @@ namespace OrchX.Agents
                     return await HandleReadFileAsync(funcName, args);
                 case "write_file":
                     return HandleWriteFile(funcName, args);
-                case "update_file_line":
-                    return HandleUpdateFileLine(funcName, args);
+                case "update_file_lines":
+                    return HandleUpdateFileLines(funcName, args);
                 case "search_content":
                     return HandleSearchContent(funcName, args);
                 default:
@@ -254,18 +255,22 @@ namespace OrchX.Agents
         }
 
 
-        private string HandleUpdateFileLine(string funcName, Dictionary<string, object> args)
+        private string HandleUpdateFileLines(string funcName, Dictionary<string, object> args)
         {
             string errUpd = CheckRequiredArgs(funcName, args);
             if (errUpd != null) return errUpd;
 
-            if (!int.TryParse(args["lineNumber"]?.ToString(), out int lineNum))
+            if (!int.TryParse(args["startLine"]?.ToString(), out int startLine))
             {
-                return "[Error] 無效的行號參數，'lineNumber' 必須為整數。";
+                return "[Error] 無效的行號參數，'startLine' 必須為整數。";
+            }
+            if (!int.TryParse(args["endLine"]?.ToString(), out int endLine))
+            {
+                return "[Error] 無效的行號參數，'endLine' 必須為整數。";
             }
 
             string newContent = args["newContent"]?.ToString() ?? string.Empty;
-            return _fileTools.UpdateFileLine(args["filePath"].ToString(), lineNum, newContent);
+            return _fileTools.UpdateFileLines(args["filePath"].ToString(), startLine, endLine, newContent);
         }
 
         private string HandleSearchContent(string funcName, Dictionary<string, object> args)
