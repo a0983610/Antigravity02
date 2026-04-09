@@ -65,6 +65,9 @@ namespace OrchX.Agents
         // 是否附加系統環境與工作區等固定資訊 (預設不加)
         public bool EnableSystemFixedInfo { get; set; } = false;
         
+        // 是否在用戶的第一句附加固定資訊 (預設不加)
+        public bool EnableFirstPromptFixedInfo { get; set; } = false;
+        
         // 歷史紀錄壓縮 Token 閾值
         public int TokenThresholdForCompression { get; set; } = 100000;
 
@@ -170,6 +173,16 @@ namespace OrchX.Agents
             string finalPrompt = EnableTimestampHeader ? 
                 $"[Current Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}]\n{userPrompt}" : 
                 userPrompt;
+
+            if (EnableFirstPromptFixedInfo && ChatHistory.Count == 0)
+            {
+                string additionalInfo = BuildFirstPromptFixedInfo();
+                if (!string.IsNullOrWhiteSpace(additionalInfo))
+                {
+                    finalPrompt = $"{additionalInfo}\n{finalPrompt}";
+                }
+            }
+
             ChatHistory.Add(Client.BuildMessageContent("user", finalPrompt));
         }
 
@@ -221,11 +234,9 @@ namespace OrchX.Agents
         }
 
         /// <summary>
-        /// 收集並建構要固定附加於系統提示之前的環境或背景資訊。
-        /// 包含系統環境、可用技能 (Skills)、知識庫索引與工作區檔案清單等。
-        /// 子類別可覆寫此方法以自訂或擴充附加的內容。
+        /// 收集並建構共用的固定系統資訊。
         /// </summary>
-        protected virtual string BuildSystemFixedInfo()
+        protected string GetSharedFixedInfo()
         {
             var fileTools = new FileTools();
             string skillsData = fileTools.ReadSkills(fileTools.SkillsPath);
@@ -270,6 +281,25 @@ namespace OrchX.Agents
             }
 
             return additionalInfo.TrimEnd() + "\n";
+        }
+
+        /// <summary>
+        /// 收集並建構要固定附加於系統提示之前的環境或背景資訊。
+        /// 包含系統環境、可用技能 (Skills)、知識庫索引與工作區檔案清單等。
+        /// 子類別可覆寫此方法以自訂或擴充附加的內容。
+        /// </summary>
+        protected virtual string BuildSystemFixedInfo()
+        {
+            return GetSharedFixedInfo();
+        }
+
+        /// <summary>
+        /// 收集並建構要附加於使用者第一次提問之前的固定資訊。
+        /// 子類別可覆寫此方法以自訂或擴充附加的內容。
+        /// </summary>
+        protected virtual string BuildFirstPromptFixedInfo()
+        {
+            return GetSharedFixedInfo();
         }
 
 
