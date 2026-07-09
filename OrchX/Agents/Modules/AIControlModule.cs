@@ -201,7 +201,14 @@ namespace OrchX.Agents
                     return result;
                 }
 
-                return "指令已更新，將於下一次任務啟動或新對話時完整生效（因 AgentConfig.cs 會在初始化時讀取此檔）。";
+                if (_agent != null)
+                {
+                    // 重新讀取完整系統指令 (基礎指令 + SystemInstruction.txt)，讓調整立即生效
+                    _agent.UpdateSystemInstruction(OrchX.Config.AgentConfig.GetSystemInstruction());
+                    return "指令已更新並立即生效（已寫入 .agent/SystemInstruction.txt，之後啟動也會自動載入）。";
+                }
+
+                return "指令已寫入 .agent/SystemInstruction.txt，將於程式下次啟動時生效。";
             }
             catch (Exception ex)
             {

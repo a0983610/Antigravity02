@@ -57,6 +57,14 @@ namespace OrchX.Agents
 
         protected string SystemInstruction { get; set; }
 
+        /// <summary>
+        /// 更新系統指令，於下一次 API 請求時生效。
+        /// </summary>
+        public void UpdateSystemInstruction(string systemInstruction)
+        {
+            SystemInstruction = systemInstruction;
+        }
+
         protected List<object> ToolDeclarations;
         protected List<object> ChatHistory; // 保存完整對話紀錄
         private bool _modelSwitchHappenedInThisTurn = false; // 追蹤此輪是否觸發模型切換

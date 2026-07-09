@@ -17,7 +17,7 @@ namespace OrchX.Agents
             // 僅允許白名單指令，並具備嚴格的安全性過濾（禁止重定向、管線、連鎖指令等）。
             yield return client.CreateFunctionDeclaration(
                 "run_terminal_command",
-                "Execute terminal commands. ONLY allowed: python, pip, node, npm, npx, dir, echo, type, move, del, ren, mkdir, rmdir, git status/log. RESTRICTIONS: No redirection (><), pipes (|), chaining (&), variables (%), or path jumping (..). 'npm install' must use '--ignore-scripts'. NO 'npm run' or 'pip install'. 'git log' no '-p/--all'. 'dir/type' limited to current directory.",
+                "Execute terminal commands. ONLY allowed: python, pip, node, npm, npx, dir, echo, type, move, copy, del, ren, rm, mv, cp, mkdir, rmdir, git status/log. RESTRICTIONS: No redirection (><), pipes (|), chaining (&), variables (%), newlines, or path jumping (..). 'npm install' must use '--ignore-scripts'. NO 'npm run' or 'pip install'. 'git log' no '-p/--all'. 'dir/type' limited to current directory.",
                 new
                 {
                     type = "object",
@@ -204,10 +204,11 @@ namespace OrchX.Agents
 
             string cmdLower = command.Trim().ToLower();
 
-            // 1. 禁止重定向符號與管線符號，新增限制 % (防範環境變數混淆)
-            if (cmdLower.Contains(">") || cmdLower.Contains("<") || cmdLower.Contains("|") || cmdLower.Contains("&") || cmdLower.Contains("%"))
+            // 1. 禁止重定向符號與管線符號，新增限制 % (防範環境變數混淆)；換行符號可讓 cmd 連續執行多條指令，一併禁止
+            if (cmdLower.Contains(">") || cmdLower.Contains("<") || cmdLower.Contains("|") || cmdLower.Contains("&") || cmdLower.Contains("%") ||
+                cmdLower.Contains("\n") || cmdLower.Contains("\r"))
             {
-                return "禁止使用重定向、管線符號或環境變數 (> < | & %)";
+                return "禁止使用重定向、管線符號、環境變數或換行符號 (> < | & % 與換行)";
             }
 
             // 2. 禁止跳轉到父目錄
@@ -230,7 +231,8 @@ namespace OrchX.Agents
                 "echo ", 
                 "type ", 
                 "move ", "del ", "ren ", "mkdir ", "rmdir ", "copy ", "rm ", "mv ", "cp ",
-                "git status", "git log"
+                // 帶尾空格，避免 "git statusXXX"、"git logs" 之類字串通過前綴檢查；無參數版本由 allowedExact 涵蓋
+                "git status ", "git log "
             };
 
             // 允許完全相等的基礎指令 (沒有參數的情況)
@@ -285,10 +287,13 @@ namespace OrchX.Agents
                                 return "基於安全考量，'type' 指令僅允許讀取當前目錄下的檔案，禁止包含路徑分隔符號 (\\ 或 /)";
                             }
                         }
-                        else if (prefix == "git log" && normalizedCmd.Length > "git log".Length && normalizedCmd[7] == ' ')
+                        else if (prefix == "git log ")
                         {
-                            // 將參數拆解成獨立 token，避免誤擋合法的字串 (例如 -pretty)
-                            string[] tokens = args.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                            // 將參數拆解成獨立 token，避免誤擋合法的字串 (例如 -pretty)；
+                            // 比對前先去除引號，防止 "-p" 這類帶引號寫法繞過攔截
+                            string[] tokens = args.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(t => t.Trim('"', '\''))
+                                .ToArray();
                             if (tokens.Contains("-p") || tokens.Contains("--patch") || tokens.Contains("--all"))
                             {
                                 return "'git log' 指令禁止使用 -p, --patch 或 --all 參數，以避免機敏資訊外洩";
