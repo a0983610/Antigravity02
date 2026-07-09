@@ -63,25 +63,25 @@ namespace OrchX.Agents
             switch (funcName)
             {
                 case "http_get":
-                    return await HandleHttpGetAsync(funcName, args);
+                    return await HandleHttpGetAsync(funcName, args, cancellationToken);
                 case "http_post":
-                    return await HandleHttpPostAsync(funcName, args);
+                    return await HandleHttpPostAsync(funcName, args, cancellationToken);
                 default:
                     return null;
             }
         }
 
-        private async Task<string> HandleHttpGetAsync(string funcName, Dictionary<string, object> args)
+        private async Task<string> HandleHttpGetAsync(string funcName, Dictionary<string, object> args, System.Threading.CancellationToken cancellationToken)
         {
             string errGet = CheckRequiredArgs(funcName, args);
             if (errGet != null) return errGet;
 
             string getUrl = args["url"].ToString();
             string getHeaders = GetOptionalString(args, "headers");
-            return await _httpTools.GetAsync(getUrl, getHeaders);
+            return await _httpTools.GetAsync(getUrl, getHeaders, cancellationToken);
         }
 
-        private async Task<string> HandleHttpPostAsync(string funcName, Dictionary<string, object> args)
+        private async Task<string> HandleHttpPostAsync(string funcName, Dictionary<string, object> args, System.Threading.CancellationToken cancellationToken)
         {
             string errPost = CheckRequiredArgs(funcName, args);
             if (errPost != null) return errPost;
@@ -90,7 +90,7 @@ namespace OrchX.Agents
             string body = args["body"].ToString();
             string contentType = GetOptionalString(args, "contentType", "application/json");
             string postHeaders = GetOptionalString(args, "headers");
-            return await _httpTools.PostAsync(postUrl, body, contentType, postHeaders);
+            return await _httpTools.PostAsync(postUrl, body, contentType, postHeaders, cancellationToken);
         }
     }
 }

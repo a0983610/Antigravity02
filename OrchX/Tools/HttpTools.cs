@@ -11,22 +11,27 @@ namespace OrchX.Tools
     /// </summary>
     public class HttpTools
     {
-        private static readonly HttpClient _httpClient = new HttpClient();
+        // 明確設定逾時，不依賴隱含預設；進行中的請求可由 CancellationToken 中斷
+        private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(100) };
 
 
-        public async Task<string> GetAsync(string url, string headersJson = null)
+        public async Task<string> GetAsync(string url, string headersJson = null, System.Threading.CancellationToken cancellationToken = default)
         {
             try
             {
                 using (var request = new HttpRequestMessage(HttpMethod.Get, url))
                 {
                     AddHeaders(request, headersJson);
-                    using (var response = await _httpClient.SendAsync(request))
+                    using (var response = await _httpClient.SendAsync(request, cancellationToken))
                     {
                         string content = await response.Content.ReadAsStringAsync();
                         return $"Status: {response.StatusCode}\nContent: {content}";
                     }
                 }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw; // 使用者中斷需上拋終止本輪，不可包裝成工具結果字串
             }
             catch (Exception ex)
             {
@@ -35,21 +40,26 @@ namespace OrchX.Tools
             }
         }
 
-        public async Task<string> PostAsync(string url, string body, string contentType = "application/json", string headersJson = null)
+        public async Task<string> PostAsync(string url, string body, string contentType = "application/json", string headersJson = null, System.Threading.CancellationToken cancellationToken = default)
         {
             try
             {
                 using (var request = new HttpRequestMessage(HttpMethod.Post, url))
                 {
-                    AddHeaders(request, headersJson);
+                    // 先設定 Content 再加 headers，內容類 header (如 Content-Type) 才有 fallback 目標
                     request.Content = new StringContent(body, Encoding.UTF8, contentType);
+                    AddHeaders(request, headersJson);
 
-                    using (var response = await _httpClient.SendAsync(request))
+                    using (var response = await _httpClient.SendAsync(request, cancellationToken))
                     {
                         string content = await response.Content.ReadAsStringAsync();
                         return $"Status: {response.StatusCode}\nContent: {content}";
                     }
                 }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw; // 使用者中斷需上拋終止本輪，不可包裝成工具結果字串
             }
             catch (Exception ex)
             {
@@ -69,7 +79,12 @@ namespace OrchX.Tools
                 {
                     foreach (var kvp in headerDict)
                     {
-                        request.Headers.TryAddWithoutValidation(kvp.Key, kvp.Value);
+                        // 請求層加不進去的內容類 header (如 Content-Type)，改加到 Content.Headers，皆失敗才記 log
+                        if (!request.Headers.TryAddWithoutValidation(kvp.Key, kvp.Value) &&
+                            !(request.Content?.Headers.TryAddWithoutValidation(kvp.Key, kvp.Value) ?? false))
+                        {
+                            UsageLogger.LogError($"HttpTools: 無法加入 header '{kvp.Key}'");
+                        }
                     }
                 }
             }

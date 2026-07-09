@@ -111,6 +111,23 @@ namespace OrchX.UI
             Console.WriteLine($"\n[PROMPT] {message}");
             Console.ResetColor();
 
+            // 確保底部有足夠空間繪製選單，避免繪製時視窗捲動導致 startTop 失效、重繪錯位
+            try
+            {
+                int reservedLines = options.Length + 1;
+                int maxTop = Console.BufferHeight - 1;
+                if (Console.CursorTop + reservedLines > maxTop)
+                {
+                    int linesToPush = (Console.CursorTop + reservedLines) - maxTop;
+                    for (int i = 0; i < linesToPush; i++)
+                    {
+                        Console.WriteLine();
+                    }
+                    Console.SetCursorPosition(0, Console.CursorTop - linesToPush);
+                }
+            }
+            catch { }
+
             int selectedIndex = 0;
             int startTop = Console.CursorTop;
             bool cursorVisible = true;

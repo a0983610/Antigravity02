@@ -39,6 +39,27 @@ namespace OrchX.UI
             => text.Replace("\r\n", "\n").Replace("\r", "\n");
 
         /// <summary>
+        /// 行寬超過可用寬度時只保留尾端可容納的部分（使用者正在輸入的段落），
+        /// 避免 Console 自動換行使實際列數與邏輯行數不符、破壞多行版面。
+        /// </summary>
+        private static string ClipToWidthFromEnd(string text, int maxWidth)
+        {
+            if (maxWidth <= 0) return string.Empty;
+            if (GetDisplayWidth(text) <= maxWidth) return text;
+
+            int width = 0;
+            int startIndex = text.Length;
+            for (int i = text.Length - 1; i >= 0; i--)
+            {
+                int cw = GetDisplayWidth(text[i].ToString());
+                if (width + cw > maxWidth) break;
+                width += cw;
+                startIndex = i;
+            }
+            return text.Substring(startIndex);
+        }
+
+        /// <summary>
         /// 提供具備自動完成與指令提示功能的控制台輸入讀取機制。
         /// 支援 Ctrl+Enter 換行輸入，Enter 送出。
         /// </summary>
@@ -128,7 +149,9 @@ namespace OrchX.UI
                         if (row >= Console.BufferHeight) break;
 
                         int colStart = (i == 0) ? promptLeft : 0;
-                        int lineDisplayWidth = GetDisplayWidth(lines[i]);
+                        // 超過可用寬度時裁切顯示，維持「一邏輯行佔一實際列」的版面假設
+                        string displayLine = ClipToWidthFromEnd(lines[i], windowWidth - colStart - 1);
+                        int lineDisplayWidth = GetDisplayWidth(displayLine);
 
                         // 計算需要補多少空白才能覆蓋上次比較長的殘字
                         int prevWidth = prevLineWidths.TryGetValue(i, out int pw) ? pw : 0;
@@ -138,7 +161,7 @@ namespace OrchX.UI
                         padding = Math.Min(padding, Math.Max(0, maxPadding));
 
                         Console.SetCursorPosition(colStart, row);
-                        Console.Write(lines[i] + new string(' ', padding));
+                        Console.Write(displayLine + new string(' ', padding));
 
                         prevLineWidths[i] = lineDisplayWidth;
                     }
