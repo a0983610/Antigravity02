@@ -15,6 +15,8 @@ namespace OrchX
     {
         private static readonly string EnvPath = Path.Combine(AppContext.BaseDirectory, ".env");
         private static CancellationTokenSource _currentCts;
+        // 保護 _currentCts 的 Cancel 與 Dispose/替換不交錯，避免 Ctrl+C handler 對已 Dispose 的 CTS 呼叫 Cancel
+        private static readonly object _ctsLock = new object();
 
         static async Task Main(string[] args)
         {
@@ -24,9 +26,12 @@ namespace OrchX
             Console.CancelKeyPress += (sender, e) =>
             {
                 e.Cancel = true;
-                if (_currentCts != null && !_currentCts.IsCancellationRequested)
+                lock (_ctsLock)
                 {
-                    _currentCts.Cancel();
+                    if (_currentCts != null && !_currentCts.IsCancellationRequested)
+                    {
+                        _currentCts.Cancel();
+                    }
                 }
             };
 
@@ -158,8 +163,11 @@ namespace OrchX
 
                 try
                 {
-                    _currentCts?.Dispose();
-                    _currentCts = new CancellationTokenSource();
+                    lock (_ctsLock)
+                    {
+                        _currentCts?.Dispose();
+                        _currentCts = new CancellationTokenSource();
+                    }
                     await agent.ExecuteAsync(input, ui, _currentCts.Token);
                 }
                 catch (OperationCanceledException)
@@ -197,8 +205,11 @@ namespace OrchX
                 // 若非指令，則視為 Prompt 直接執行
                 try
                 {
-                    _currentCts?.Dispose();
-                    _currentCts = new CancellationTokenSource();
+                    lock (_ctsLock)
+                    {
+                        _currentCts?.Dispose();
+                        _currentCts = new CancellationTokenSource();
+                    }
                     await agent.ExecuteAsync(initialInput, ui, _currentCts.Token);
                 }
                 catch (OperationCanceledException)
