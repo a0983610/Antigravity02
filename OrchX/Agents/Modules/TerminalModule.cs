@@ -135,12 +135,24 @@ namespace OrchX.Agents
                         process.StartInfo = processStartInfo;
                         process.Start();
 
-                        // Read output streams
-                        string output = await process.StandardOutput.ReadToEndAsync();
-                        string error = await process.StandardError.ReadToEndAsync();
+                        // 並行讀取兩條輸出串流，避免其中一邊 pipe 緩衝區塞滿導致子行程與本程式互等死鎖
+                        Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
+                        Task<string> errorTask = process.StandardError.ReadToEndAsync();
 
                         // Wait for process to cleanly exit or throw OperationCanceledException
-                        await process.WaitForExitAsync(cancellationToken);
+                        try
+                        {
+                            await process.WaitForExitAsync(cancellationToken);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // 取消時終止整個子行程樹，讓 pipe 關閉、讀取工作得以結束，避免殘留子行程
+                            try { process.Kill(entireProcessTree: true); } catch { }
+                            throw;
+                        }
+
+                        string output = await outputTask;
+                        string error = await errorTask;
 
                         string result = "";
                         if (!string.IsNullOrWhiteSpace(output))

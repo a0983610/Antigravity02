@@ -443,7 +443,11 @@ namespace OrchX.Agents
             try
             {
                 string resultText = await GenerateSummaryAsync(compressPrompt, cancellationToken);
-                if (resultText != null)
+                if (string.IsNullOrWhiteSpace(resultText))
+                {
+                    UsageLogger.LogError("CompressHistory: 摘要模型未回傳有效文字，跳過本次壓縮");
+                }
+                else
                 {
                     string summaryText = resultText;
                     string knowledgeText = "";
@@ -473,7 +477,14 @@ namespace OrchX.Agents
                         }
                     }
 
-                    ApplyHistoryCompression(actualSplitIndex, summaryText, ui);
+                    if (string.IsNullOrWhiteSpace(summaryText))
+                    {
+                        UsageLogger.LogError("CompressHistory: 摘要內容為空，跳過本次壓縮");
+                    }
+                    else
+                    {
+                        ApplyHistoryCompression(actualSplitIndex, summaryText, ui);
+                    }
                 }
             }
             catch (Exception ex)
@@ -515,7 +526,8 @@ namespace OrchX.Agents
             string rawJson = await FastClient.GenerateContentAsync(request, cancellationToken);
             var data = JsonTools.Deserialize<Dictionary<string, object>>(rawJson);
 
-            return FastClient.ExtractTextFromResponseData(data) ?? "摘要失敗";
+            // 解析不到文字時回傳 null，由呼叫端跳過壓縮，不可用替代字串頂替摘要
+            return FastClient.ExtractTextFromResponseData(data);
         }
 
         /// <summary>

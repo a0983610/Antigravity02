@@ -24,6 +24,11 @@ namespace OrchX.Agents
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, ExpertAgent> _agents = new System.Collections.Concurrent.ConcurrentDictionary<string, ExpertAgent>(StringComparer.OrdinalIgnoreCase);
         private readonly object _agentLock = new object();
 
+        /// <summary>
+        /// 每位專家一個號誌，將同名專家的執行串行化 (ChatHistory 非執行緒安全，禁止並發 ExecuteAsync)
+        /// </summary>
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, System.Threading.SemaphoreSlim> _agentSemaphores = new System.Collections.Concurrent.ConcurrentDictionary<string, System.Threading.SemaphoreSlim>(StringComparer.OrdinalIgnoreCase);
+
         public MultiAgentModule(BaseAgent agent)
         {
             _smartClient = agent?.SmartClient;
@@ -264,7 +269,16 @@ namespace OrchX.Agents
                 }
             }
 
-            return await ConsultExpertInternalAsync(agent, question, isNewAgent, ui, cancellationToken);
+            var semaphore = _agentSemaphores.GetOrAdd(expertName, _ => new System.Threading.SemaphoreSlim(1, 1));
+            await semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                return await ConsultExpertInternalAsync(agent, question, isNewAgent, ui, cancellationToken);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
         }
 
         private async Task<string> ConsultExpertInternalAsync(ExpertAgent agent, string question, bool isNewAgent, IAgentUI ui, System.Threading.CancellationToken cancellationToken)
