@@ -83,8 +83,9 @@ namespace OrchX.Tools
         /// <summary>
         /// 取得指定 provider 的模擬回應資料。
         /// providerName 會被正規化為小寫，以確保檔案命名一致（例如 "gemini_mock_response_0001.json"）。
+        /// 找不到專屬模擬檔且有指定 fallbackProviderName 時，改用 fallback 的資料流（例如專家 Agent 未預先準備專屬 mock 檔）。
         /// </summary>
-        public static string GetMockResponse(string providerName = "gemini")
+        public static string GetMockResponse(string providerName = "gemini", string fallbackProviderName = null)
         {
             lock (_syncLock)
             {
@@ -118,6 +119,13 @@ namespace OrchX.Tools
                 }
                 else
                 {
+                    if (!string.IsNullOrEmpty(fallbackProviderName) &&
+                        !string.Equals(fallbackProviderName, normalizedName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.WriteLine($"\n[{providerName}Client] 找不到模擬回應檔案 ({mockFileName})，改用 {fallbackProviderName} 的模擬資料流。");
+                        return GetMockResponse(fallbackProviderName);
+                    }
+
                     var directory = Path.GetDirectoryName(mockFilePath);
                     if (!Directory.Exists(directory))
                     {

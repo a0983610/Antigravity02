@@ -337,7 +337,25 @@ namespace OrchX
                     string prefix = keyName + "=";
                     if (trimmed.StartsWith(prefix))
                     {
-                        string result = trimmed.Substring(prefix.Length).Trim().Trim('\'', '"');
+                        string result = trimmed.Substring(prefix.Length).Trim();
+
+                        if (result.Length >= 2 && (result[0] == '"' || result[0] == '\''))
+                        {
+                            // 帶引號的值：取引號內的原始內容，閉引號之後的部分 (含行內註解) 忽略
+                            char quote = result[0];
+                            int closing = result.IndexOf(quote, 1);
+                            result = closing > 0 ? result.Substring(1, closing - 1) : result.Trim(quote);
+                        }
+                        else
+                        {
+                            // 未帶引號的值：「空白 + #」起視為行內註解
+                            int commentIdx = result.IndexOf(" #", StringComparison.Ordinal);
+                            if (commentIdx >= 0)
+                            {
+                                result = result.Substring(0, commentIdx).TrimEnd();
+                            }
+                        }
+
                         return string.IsNullOrEmpty(result) ? null : result; // 空值視為未設定
                     }
                 }

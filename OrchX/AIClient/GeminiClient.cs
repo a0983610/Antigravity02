@@ -29,7 +29,8 @@ namespace OrchX.AIClient
             if (string.IsNullOrWhiteSpace(_apiKey))
             {
                 string providerName = request.MockProviderName ?? "Gemini";
-                return MockDataManager.GetMockResponse(providerName);
+                // 專屬 mock 資料流不存在時 (如專家 Agent 以專家名為流名)，退回 provider 預設資料流
+                return MockDataManager.GetMockResponse(providerName, ProviderName);
             }
 
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";

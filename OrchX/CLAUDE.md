@@ -46,8 +46,8 @@ OrchX 是一個以 Google Gemini 為後端的主控台 AI 自動化助手。它�
 | 檔案 | 職責 |
 |------|------|
 | `Program.cs` | 進入點；處理 CLI 參數、`.env` 初始化、互動式 REPL、Ctrl+C 中斷 |
-| `CommandManager.cs` | 註冊斜線指令（`/exit`, `/help`, `/new`, `/save`, `/load`, `/time`, `/rmock`） |
-| `Agents/BaseAgent.cs` | 抽象基底類別：函式呼叫迴圈、對話歷史管理、Token 壓縮（超過 10 萬 token 時自動摘要）、模型模式協調 |
+| `CommandManager.cs` | 註冊斜線指令（`/exit`, `/help`, `/new`, `/save`, `/load`, `/time`, `/rmock`, `/test`） |
+| `Agents/Base/BaseAgent.cs` | 抽象基底類別：函式呼叫迴圈、對話歷史管理、Token 壓縮（超過 10 萬 token 時自動摘要）、模型模式協調 |
 | `Agents/ManagerAgent.cs` | 具體 Agent 實作，整合所有模組並初始化工具 |
 | `Agents/Modules/FileModule.cs` | 檔案操作（列出/讀取/寫入/刪除/移動）、影像辨識、技能與知識庫存取 |
 | `Agents/Modules/HttpModule.cs` | HTTP GET/POST 請求 |
