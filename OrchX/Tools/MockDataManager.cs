@@ -30,49 +30,53 @@ namespace OrchX.Tools
             if (!IsRecordingMockData) return;
 
             string normalizedName = providerName.ToLower();
-            string basePath = Environment.CurrentDirectory;
+            string basePath = AppContext.BaseDirectory;
             string mockDataDir = Path.Combine(basePath, "MockData");
 
-            if (!Directory.Exists(mockDataDir))
+            // 流水號的「掃描取號 + 寫入」需在鎖內完成，避免並發記錄時取到同號互相覆蓋
+            lock (_syncLock)
             {
-                Directory.CreateDirectory(mockDataDir);
-            }
-
-            int nextSequenceNumber = 1;
-            
-            // 尋找現有的檔案以決定下一個流水號
-            string searchPattern = $"{normalizedName}_mock_response_*.json";
-            string[] existingFiles = Directory.GetFiles(mockDataDir, searchPattern);
-            
-            foreach (string file in existingFiles)
-            {
-                string fileName = Path.GetFileNameWithoutExtension(file);
-                // 預期檔案名稱格式為 {normalizedName}_mock_response_{counter:D4}
-                string prefix = $"{normalizedName}_mock_response_";
-                if (fileName.StartsWith(prefix) && int.TryParse(fileName.Substring(prefix.Length), out int num))
+                if (!Directory.Exists(mockDataDir))
                 {
-                    if (num >= nextSequenceNumber)
+                    Directory.CreateDirectory(mockDataDir);
+                }
+
+                int nextSequenceNumber = 1;
+
+                // 尋找現有的檔案以決定下一個流水號
+                string searchPattern = $"{normalizedName}_mock_response_*.json";
+                string[] existingFiles = Directory.GetFiles(mockDataDir, searchPattern);
+
+                foreach (string file in existingFiles)
+                {
+                    string fileName = Path.GetFileNameWithoutExtension(file);
+                    // 預期檔案名稱格式為 {normalizedName}_mock_response_{counter:D4}
+                    string prefix = $"{normalizedName}_mock_response_";
+                    if (fileName.StartsWith(prefix) && int.TryParse(fileName.Substring(prefix.Length), out int num))
                     {
-                        nextSequenceNumber = num + 1;
+                        if (num >= nextSequenceNumber)
+                        {
+                            nextSequenceNumber = num + 1;
+                        }
                     }
                 }
-            }
 
-            string targetFileName = $"{normalizedName}_mock_response_{nextSequenceNumber:D4}.json";
-            string targetPath = Path.Combine(mockDataDir, targetFileName);
+                string targetFileName = $"{normalizedName}_mock_response_{nextSequenceNumber:D4}.json";
+                string targetPath = Path.Combine(mockDataDir, targetFileName);
 
-            try
-            {
-                File.WriteAllText(targetPath, rawJson, Encoding.UTF8);
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"\n[System] 已成功記錄 {providerName} API 回應至 {targetPath}");
-                Console.ResetColor();
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\n[Error] 寫入 MockData 失敗: {ex.Message}");
-                Console.ResetColor();
+                try
+                {
+                    File.WriteAllText(targetPath, rawJson, Encoding.UTF8);
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"\n[System] 已成功記錄 {providerName} API 回應至 {targetPath}");
+                    Console.ResetColor();
+                }
+                catch (Exception ex)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"\n[Error] 寫入 MockData 失敗: {ex.Message}");
+                    Console.ResetColor();
+                }
             }
         }
 
@@ -92,7 +96,7 @@ namespace OrchX.Tools
                 _mockMessageShown.TryAdd(normalizedName, false);
 
                 int counter = _mockCounters[normalizedName];
-                string basePath = Environment.CurrentDirectory;
+                string basePath = AppContext.BaseDirectory;
                 string mockFileName = $"{normalizedName}_mock_response_{counter:D4}.json";
                 string mockFilePath = Path.Combine(basePath, "MockData", mockFileName);
 

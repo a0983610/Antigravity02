@@ -27,9 +27,10 @@ namespace OrchX.Tools
         {
             try
             {
-                _sessionCallCount++;
+                // 背景專家任務可能與主 Agent 並發記錄，計數需用原子操作
+                int callNumber = System.Threading.Interlocked.Increment(ref _sessionCallCount);
                 string logEntry = $"[{DateTime.Now:HH:mm:ss}] " +
-                                  $"Call #{_sessionCallCount} | " +
+                                  $"Call #{callNumber} | " +
                                   $"Model: {modelName} | " +
                                   $"Duration: {durationMs}ms | " +
                                   $"Tokens: [Prompt: {promptTokens}, Candidate: {candidateTokens}, Total: {totalTokens}]" +

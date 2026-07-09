@@ -81,6 +81,10 @@ namespace OrchX.Agents
         // 歷史紀錄壓縮 Token 閾值
         public int TokenThresholdForCompression { get; set; } = 100000;
 
+        // 連續壓縮失敗達上限後停止嘗試，避免歷史已超過摘要模型上限時每輪重發注定失敗的請求
+        private int _consecutiveCompressionFailures = 0;
+        private const int MaxCompressionFailures = 3;
+
         private bool _hasWorkspaceExceededLimit = false;
 
         // 靜態快取：系統環境資訊不會變動，只需初始化一次
@@ -134,7 +138,14 @@ namespace OrchX.Agents
                     accumulatedTokensThisTurn += currentTokens;
 
                     var parts = Client.ExtractResponseParts(data, out var modelContent);
-                    if (parts == null) break;
+                    if (parts == null)
+                    {
+                        string noResponseReason = ExtractNoResponseReason(data);
+                        ui.ReportError(string.IsNullOrEmpty(noResponseReason)
+                            ? "模型未回傳可用內容，本輪對話結束。"
+                            : $"模型未回傳可用內容 ({noResponseReason})，本輪對話結束。");
+                        break;
+                    }
 
                     ChatHistory.Add(modelContent);
 
@@ -245,6 +256,37 @@ namespace OrchX.Agents
             }
 
             return totalTokens;
+        }
+
+        /// <summary>
+        /// 從回應資料中提取模型未回傳內容的原因 (如安全阻擋、達到長度上限)，僅供 UI 顯示。
+        /// </summary>
+        private static string ExtractNoResponseReason(Dictionary<string, object> data)
+        {
+            try
+            {
+                if (data == null) return null;
+
+                if (data.TryGetValue("candidates", out var candidatesObj) &&
+                    candidatesObj is System.Collections.ArrayList candidates && candidates.Count > 0 &&
+                    candidates[0] is Dictionary<string, object> firstCandidate &&
+                    firstCandidate.TryGetValue("finishReason", out var finishReason) && finishReason != null)
+                {
+                    return $"finishReason: {finishReason}";
+                }
+
+                if (data.TryGetValue("promptFeedback", out var feedbackObj) &&
+                    feedbackObj is Dictionary<string, object> feedback &&
+                    feedback.TryGetValue("blockReason", out var blockReason) && blockReason != null)
+                {
+                    return $"blockReason: {blockReason}";
+                }
+            }
+            catch
+            {
+                // 提取原因僅供顯示，失敗不影響主流程
+            }
+            return null;
         }
 
         /// <summary>
@@ -433,6 +475,7 @@ namespace OrchX.Agents
         private async Task CompressHistoryAsync(IAgentUI ui, System.Threading.CancellationToken cancellationToken = default)
         {
             if (ChatHistory.Count < 6) return;
+            if (_consecutiveCompressionFailures >= MaxCompressionFailures) return;
 
             int actualSplitIndex = FindCompressSplitIndex();
             if (actualSplitIndex <= 0)
@@ -454,6 +497,7 @@ namespace OrchX.Agents
                 if (string.IsNullOrWhiteSpace(resultText))
                 {
                     UsageLogger.LogError("CompressHistory: 摘要模型未回傳有效文字，跳過本次壓縮");
+                    RegisterCompressionFailure();
                 }
                 else
                 {
@@ -488,16 +532,31 @@ namespace OrchX.Agents
                     if (string.IsNullOrWhiteSpace(summaryText))
                     {
                         UsageLogger.LogError("CompressHistory: 摘要內容為空，跳過本次壓縮");
+                        RegisterCompressionFailure();
                     }
                     else
                     {
                         ApplyHistoryCompression(actualSplitIndex, summaryText, ui);
+                        _consecutiveCompressionFailures = 0;
                     }
                 }
             }
             catch (Exception ex)
             {
                 UsageLogger.LogError($"History Compression Error: {ex.Message}");
+                RegisterCompressionFailure();
+            }
+        }
+
+        /// <summary>
+        /// 累計壓縮失敗次數，達上限時記錄並停止後續嘗試 (於 ClearChatHistory / LoadChatHistory 重置)。
+        /// </summary>
+        private void RegisterCompressionFailure()
+        {
+            _consecutiveCompressionFailures++;
+            if (_consecutiveCompressionFailures == MaxCompressionFailures)
+            {
+                UsageLogger.LogError($"CompressHistory: 已連續失敗 {MaxCompressionFailures} 次，停止自動壓縮嘗試 (於 /new 或 /load 後重置)");
             }
         }
 
@@ -555,6 +614,15 @@ namespace OrchX.Agents
         public void ClearChatHistory()
         {
             ChatHistory.Clear();
+            _consecutiveCompressionFailures = 0;
+        }
+
+        /// <summary>
+        /// 相對路徑一律以執行檔目錄為基準，與 .env / logs / AI_Workspace 的存放位置一致，避免檔案散落在啟動目錄。
+        /// </summary>
+        private static string ResolveToBaseDirectory(string filePath)
+        {
+            return Path.IsPathRooted(filePath) ? filePath : Path.Combine(AppContext.BaseDirectory, filePath);
         }
 
         /// <summary>
@@ -564,6 +632,7 @@ namespace OrchX.Agents
         {
             try
             {
+                filePath = ResolveToBaseDirectory(filePath);
                 string json = JsonTools.Serialize(ChatHistory);
                 File.WriteAllText(filePath, json);
                 return true;
@@ -582,6 +651,7 @@ namespace OrchX.Agents
         {
             try
             {
+                filePath = ResolveToBaseDirectory(filePath);
                 if (!File.Exists(filePath))
                 {
                     UsageLogger.LogError($"LoadChatHistory Error: File not found: {filePath}");
@@ -594,6 +664,7 @@ namespace OrchX.Agents
                 {
                     ChatHistory.Clear();
                     ChatHistory.AddRange(history);
+                    _consecutiveCompressionFailures = 0;
                     return true;
                 }
                 return false;

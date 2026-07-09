@@ -8,6 +8,9 @@ namespace OrchX.Tools
     {
         public static bool IsRecordingTest { get; set; } = false;
 
+        // 流水號的「掃描取號 + 寫入」需在鎖內完成，避免並發記錄時取到同號互相覆蓋
+        private static readonly object _recordLock = new object();
+
         public static void RecordRequest(string json)
         {
             if (!IsRecordingTest || string.IsNullOrWhiteSpace(json)) return;
@@ -24,38 +27,41 @@ namespace OrchX.Tools
         {
             try
             {
-                string basePath = Environment.CurrentDirectory;
+                string basePath = AppContext.BaseDirectory;
                 string targetDir = Path.Combine(basePath, "Test", folderName);
 
-                if (!Directory.Exists(targetDir))
+                lock (_recordLock)
                 {
-                    Directory.CreateDirectory(targetDir);
-                }
-
-                int nextSequenceNumber = 1;
-                string searchPattern = $"*_{fileSuffix}.json";
-                string[] existingFiles = Directory.GetFiles(targetDir, searchPattern);
-                foreach (string file in existingFiles)
-                {
-                    string fileName = Path.GetFileNameWithoutExtension(file);
-                    string suffixStr = $"_{fileSuffix}";
-                    if (fileName.EndsWith(suffixStr))
+                    if (!Directory.Exists(targetDir))
                     {
-                        string prefixStr = fileName.Substring(0, fileName.Length - suffixStr.Length);
-                        if (int.TryParse(prefixStr, out int num))
+                        Directory.CreateDirectory(targetDir);
+                    }
+
+                    int nextSequenceNumber = 1;
+                    string searchPattern = $"*_{fileSuffix}.json";
+                    string[] existingFiles = Directory.GetFiles(targetDir, searchPattern);
+                    foreach (string file in existingFiles)
+                    {
+                        string fileName = Path.GetFileNameWithoutExtension(file);
+                        string suffixStr = $"_{fileSuffix}";
+                        if (fileName.EndsWith(suffixStr))
                         {
-                            if (num >= nextSequenceNumber)
+                            string prefixStr = fileName.Substring(0, fileName.Length - suffixStr.Length);
+                            if (int.TryParse(prefixStr, out int num))
                             {
-                                nextSequenceNumber = num + 1;
+                                if (num >= nextSequenceNumber)
+                                {
+                                    nextSequenceNumber = num + 1;
+                                }
                             }
                         }
                     }
+
+                    string targetFileName = $"{nextSequenceNumber:D4}_{fileSuffix}.json";
+                    string targetPath = Path.Combine(targetDir, targetFileName);
+
+                    File.WriteAllText(targetPath, rawJson, Encoding.UTF8);
                 }
-
-                string targetFileName = $"{nextSequenceNumber:D4}_{fileSuffix}.json";
-                string targetPath = Path.Combine(targetDir, targetFileName);
-
-                File.WriteAllText(targetPath, rawJson, Encoding.UTF8);
             }
             catch (Exception ex)
             {
