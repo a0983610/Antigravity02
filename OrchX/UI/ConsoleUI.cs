@@ -5,6 +5,14 @@ namespace OrchX.UI
 {
     public class ConsoleUI : IAgentUI
     {
+        private readonly bool _autoApprove;
+
+        /// <param name="autoApprove">非互動環境 (輸入/輸出被重導向) 時是否自動同意確認提示，由 .env 的 AUTO_APPROVE 控制；預設 false = 無人回應時拒絕</param>
+        public ConsoleUI(bool autoApprove = false)
+        {
+            _autoApprove = autoApprove;
+        }
+
         public void ReportThinking(int iteration, string modelName)
         {
             Console.ForegroundColor = ConsoleColor.DarkCyan;
@@ -79,13 +87,24 @@ namespace OrchX.UI
                 {
                     Console.WriteLine($" {i + 1}. {options[i]}");
                 }
-                Console.Write("請輸入選項數字 (Enter 預設 1): ");
+
+                if (_autoApprove)
+                {
+                    // 使用者已透過 AUTO_APPROVE 明確授權自動放行，留下紀錄供事後稽核
+                    Console.WriteLine($"[Auto-Approve] AUTO_APPROVE 已啟用，自動選擇: 1. {options[0]}");
+                    return Task.FromResult(0);
+                }
+
+                Console.Write("請輸入選項數字 (無有效回答視為拒絕): ");
                 string input = Console.ReadLine();
                 if (int.TryParse(input, out int choice) && choice >= 1 && choice <= options.Length)
                 {
                     return Task.FromResult(choice - 1);
                 }
-                return Task.FromResult(0);
+
+                // 非互動且無有效回答：安全預設為「未同意」，避免無人看管時自動放行危險操作
+                Console.WriteLine("[System] 未收到有效回答，視為拒絕。(自動化場景請在 .env 設定 AUTO_APPROVE=true)");
+                return Task.FromResult(-1);
             }
 
             Console.ForegroundColor = ConsoleColor.Yellow;

@@ -63,7 +63,15 @@ namespace OrchX
                 OrchX.Config.AgentConfig.GetSystemInstruction()
             );
 
-            var ui = new ConsoleUI();
+            bool autoApprove = IsConfigTrue("AUTO_APPROVE");
+            if (autoApprove)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("[Config] AUTO_APPROVE 已啟用：非互動環境下的確認提示將自動同意。");
+                Console.ResetColor();
+            }
+
+            var ui = new ConsoleUI(autoApprove);
 
             bool shouldExitFromArgs = await ProcessStartupArgsAsync(args, agent, ui);
             if (shouldExitFromArgs) return;
@@ -305,6 +313,12 @@ namespace OrchX
         }
 
         static string GetApiKey() => GetConfig("GEMINI_API_KEY");
+
+        static bool IsConfigTrue(string keyName)
+        {
+            string value = GetConfig(keyName);
+            return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) || value == "1";
+        }
         
         static string GetConfig(string keyName)
         {
@@ -344,7 +358,9 @@ namespace OrchX
                                  "GEMINI_FAST_MODEL=\n\n" +
                                  "# Ollama 網址 (選填，預設為 http://localhost:11434)\n" +
                                  "OLLAMA_URL=\n" +
-                                 "OLLAMA_MODEL=gemma4\n";
+                                 "OLLAMA_MODEL=gemma4\n\n" +
+                                 "# 非互動環境 (管線/排程/重導向) 下是否自動同意危險操作的確認提示 (選填，true 開啟；預設無人回應時拒絕)\n" +
+                                 "AUTO_APPROVE=\n";
                 
                 try
                 {
