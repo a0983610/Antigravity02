@@ -56,7 +56,8 @@ namespace OrchX.AIClient.Converters
                             
                             if (TryGetFunctionResponseFromPart(part, out string fnName, out string fnContent))
                             {
-                                messages.Add(new { role = "tool", content = fnContent });
+                                // 附上 tool_name 讓模型能對應多個工具呼叫各自的結果 (舊版 Ollama 會忽略未知欄位)
+                                messages.Add(new { role = "tool", tool_name = fnName, content = fnContent });
                             }
 
                             if (part is Dictionary<string, object> dictPart)

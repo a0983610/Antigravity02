@@ -77,7 +77,7 @@ namespace OrchX.Agents
             if (errGet != null) return errGet;
 
             string getUrl = args["url"].ToString();
-            string getHeaders = args.ContainsKey("headers") ? args["headers"].ToString() : null;
+            string getHeaders = GetOptionalString(args, "headers");
             return await _httpTools.GetAsync(getUrl, getHeaders);
         }
 
@@ -88,8 +88,8 @@ namespace OrchX.Agents
 
             string postUrl = args["url"].ToString();
             string body = args["body"].ToString();
-            string contentType = args.ContainsKey("contentType") ? args["contentType"].ToString() : "application/json";
-            string postHeaders = args.ContainsKey("headers") ? args["headers"].ToString() : null;
+            string contentType = GetOptionalString(args, "contentType", "application/json");
+            string postHeaders = GetOptionalString(args, "headers");
             return await _httpTools.PostAsync(postUrl, body, contentType, postHeaders);
         }
     }

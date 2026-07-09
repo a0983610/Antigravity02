@@ -173,9 +173,9 @@ namespace OrchX.Agents
 
         private string HandleListFiles(Dictionary<string, object> args)
         {
-            string subPath = args.ContainsKey("path") ? args["path"].ToString() : "";
+            string subPath = GetOptionalString(args, "path", "");
             bool sortByTime = args.ContainsKey("sortByTime") && Convert.ToBoolean(args["sortByTime"]);
-            string filePattern = args.ContainsKey("filePattern") ? args["filePattern"].ToString() : "";
+            string filePattern = GetOptionalString(args, "filePattern", "");
             return _fileTools.ListFiles(subPath, sortByTime, filePattern);
         }
 
@@ -191,7 +191,7 @@ namespace OrchX.Agents
             }
 
             string fileContent = _fileTools.ReadFile(args["filePath"].ToString());
-            string fileQuery = args.ContainsKey("summaryQuery") ? args["summaryQuery"].ToString() : null;
+            string fileQuery = GetOptionalString(args, "summaryQuery");
 
             if (_hasFastModel && !string.IsNullOrEmpty(fileQuery))
             {
@@ -300,8 +300,8 @@ namespace OrchX.Agents
             if (errSearchCon != null) return errSearchCon;
 
             string sq = args["query"].ToString();
-            string spath = args.ContainsKey("path") ? args["path"].ToString() : "";
-            string sfPattern = args.ContainsKey("filePattern") ? args["filePattern"].ToString() : "";
+            string spath = GetOptionalString(args, "path", "");
+            string sfPattern = GetOptionalString(args, "filePattern", "");
             int ctxLines = args.ContainsKey("contextLines") ? Convert.ToInt32(args["contextLines"]) : 0;
             bool isRegex = args.ContainsKey("isRegex") && Convert.ToBoolean(args["isRegex"]);
             return _fileTools.SearchContent(sq, spath, sfPattern, ctxLines, isRegex);

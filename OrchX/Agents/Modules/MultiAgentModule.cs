@@ -150,7 +150,7 @@ namespace OrchX.Agents
 
             string expertName = args.ContainsKey("expert_name") ? args["expert_name"].ToString() : "default";
             string question = args.ContainsKey("question") ? args["question"].ToString() : "";
-            string role = args.ContainsKey("role") ? args["role"].ToString() : null;
+            string role = GetOptionalString(args, "role");
             
             bool isAsync = false;
             if (args.TryGetValue("is_async", out object valAsync) && valAsync != null)
