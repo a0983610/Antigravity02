@@ -85,7 +85,7 @@ namespace OrchX.AIClient
                     {
                         currentRetry++;
                         Console.WriteLine($"\n[GeminiClient] 收到 HTTP 429 (Too Many Requests)，等待 {delayMs / 1000.0} 秒後進行第 {currentRetry} 次重試...");
-                        await Task.Delay(delayMs);
+                        await Task.Delay(delayMs, cancellationToken);
                         delayMs *= 2; // 指數退避
                         continue;
                     }
@@ -146,8 +146,12 @@ namespace OrchX.AIClient
             var parts = ExtractResponseParts(data, out _);
             if (parts != null && parts.Count > 0)
             {
+                // 用 TryGetValue 避免 part 無 "text" 鍵 (例如只有 functionCall) 時丟 KeyNotFoundException
                 var dictPart = parts[0] as Dictionary<string, object>;
-                return dictPart?["text"]?.ToString();
+                if (dictPart != null && dictPart.TryGetValue("text", out var textObj))
+                {
+                    return textObj?.ToString();
+                }
             }
             return null;
         }
