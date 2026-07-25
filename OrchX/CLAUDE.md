@@ -8,7 +8,7 @@
 dotnet build                    # 除錯建置
 dotnet build -c Release         # 發布建置
 dotnet run                      # 互動模式
-dotnet run -- "你的提示"         # 單次執行
+dotnet run -- "你的提示"         # 帶初始提示啟動（執行完進入互動模式）
 ```
 
 目前無測試專案，也無 lint 設定。
@@ -46,8 +46,8 @@ OrchX 是一個以 Google Gemini 為後端的主控台 AI 自動化助手。它�
 | 檔案 | 職責 |
 |------|------|
 | `Program.cs` | 進入點；處理 CLI 參數、`.env` 初始化、互動式 REPL、Ctrl+C 中斷 |
-| `CommandManager.cs` | 註冊斜線指令（`/exit`, `/help`, `/new`, `/save`, `/load`, `/time`, `/rmock`） |
-| `Agents/BaseAgent.cs` | 抽象基底類別：函式呼叫迴圈、對話歷史管理、Token 壓縮（超過 80 萬 token 時自動摘要）、模型模式協調 |
+| `CommandManager.cs` | 註冊斜線指令（`/exit`, `/help`, `/new`, `/save`, `/load`, `/time`, `/rmock`, `/test`） |
+| `Agents/Base/BaseAgent.cs` | 抽象基底類別：函式呼叫迴圈、對話歷史管理、Token 壓縮（超過 10 萬 token 時自動摘要）、模型模式協調 |
 | `Agents/ManagerAgent.cs` | 具體 Agent 實作，整合所有模組並初始化工具 |
 | `Agents/Modules/FileModule.cs` | 檔案操作（列出/讀取/寫入/刪除/移動）、影像辨識、技能與知識庫存取 |
 | `Agents/Modules/HttpModule.cs` | HTTP GET/POST 請求 |
@@ -76,7 +76,7 @@ Agent 支援兩種可在執行期切換的模型模式：
 
 ### 對話歷史壓縮
 
-當對話歷史超過約 80 萬 token 時，`BaseAgent` 會自動壓縮：將完整歷史傳送給模型進行摘要，並以結構化 XML（`<Summary>` / `<Knowledge>` 標籤）取代較舊的輪次，同時保留最近的對話內容。
+當對話歷史超過約 10 萬 token（`TokenThresholdForCompression` 預設值）時，`BaseAgent` 會自動壓縮：將前半段歷史傳送給 Fast 模型進行摘要，並以結構化 XML（`<Summary>` / `<Knowledge>` 標籤）取代較舊的輪次，同時保留最近的對話內容。連續壓縮失敗達 3 次後會停止嘗試，於 `/new` 或 `/load` 後重置。
 
 ### 日誌記錄
 

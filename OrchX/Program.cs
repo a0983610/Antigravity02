@@ -15,6 +15,8 @@ namespace OrchX
     {
         private static readonly string EnvPath = Path.Combine(AppContext.BaseDirectory, ".env");
         private static CancellationTokenSource _currentCts;
+        // 保護 _currentCts 的 Cancel 與 Dispose/替換不交錯，避免 Ctrl+C handler 對已 Dispose 的 CTS 呼叫 Cancel
+        private static readonly object _ctsLock = new object();
 
         static async Task Main(string[] args)
         {
@@ -24,9 +26,12 @@ namespace OrchX
             Console.CancelKeyPress += (sender, e) =>
             {
                 e.Cancel = true;
-                if (_currentCts != null && !_currentCts.IsCancellationRequested)
+                lock (_ctsLock)
                 {
-                    _currentCts.Cancel();
+                    if (_currentCts != null && !_currentCts.IsCancellationRequested)
+                    {
+                        _currentCts.Cancel();
+                    }
                 }
             };
 
@@ -58,7 +63,15 @@ namespace OrchX
                 OrchX.Config.AgentConfig.GetSystemInstruction()
             );
 
-            var ui = new ConsoleUI();
+            bool autoApprove = IsConfigTrue("AUTO_APPROVE");
+            if (autoApprove)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("[Config] AUTO_APPROVE 已啟用：非互動環境下的確認提示將自動同意。");
+                Console.ResetColor();
+            }
+
+            var ui = new ConsoleUI(autoApprove);
 
             bool shouldExitFromArgs = await ProcessStartupArgsAsync(args, agent, ui);
             if (shouldExitFromArgs) return;
@@ -158,8 +171,11 @@ namespace OrchX
 
                 try
                 {
-                    _currentCts?.Dispose();
-                    _currentCts = new CancellationTokenSource();
+                    lock (_ctsLock)
+                    {
+                        _currentCts?.Dispose();
+                        _currentCts = new CancellationTokenSource();
+                    }
                     await agent.ExecuteAsync(input, ui, _currentCts.Token);
                 }
                 catch (OperationCanceledException)
@@ -197,8 +213,11 @@ namespace OrchX
                 // 若非指令，則視為 Prompt 直接執行
                 try
                 {
-                    _currentCts?.Dispose();
-                    _currentCts = new CancellationTokenSource();
+                    lock (_ctsLock)
+                    {
+                        _currentCts?.Dispose();
+                        _currentCts = new CancellationTokenSource();
+                    }
                     await agent.ExecuteAsync(initialInput, ui, _currentCts.Token);
                 }
                 catch (OperationCanceledException)
@@ -294,6 +313,12 @@ namespace OrchX
         }
 
         static string GetApiKey() => GetConfig("GEMINI_API_KEY");
+
+        static bool IsConfigTrue(string keyName)
+        {
+            string value = GetConfig(keyName);
+            return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) || value == "1";
+        }
         
         static string GetConfig(string keyName)
         {
@@ -312,7 +337,25 @@ namespace OrchX
                     string prefix = keyName + "=";
                     if (trimmed.StartsWith(prefix))
                     {
-                        string result = trimmed.Substring(prefix.Length).Trim().Trim('\'', '"');
+                        string result = trimmed.Substring(prefix.Length).Trim();
+
+                        if (result.Length >= 2 && (result[0] == '"' || result[0] == '\''))
+                        {
+                            // 帶引號的值：取引號內的原始內容，閉引號之後的部分 (含行內註解) 忽略
+                            char quote = result[0];
+                            int closing = result.IndexOf(quote, 1);
+                            result = closing > 0 ? result.Substring(1, closing - 1) : result.Trim(quote);
+                        }
+                        else
+                        {
+                            // 未帶引號的值：「空白 + #」起視為行內註解
+                            int commentIdx = result.IndexOf(" #", StringComparison.Ordinal);
+                            if (commentIdx >= 0)
+                            {
+                                result = result.Substring(0, commentIdx).TrimEnd();
+                            }
+                        }
+
                         return string.IsNullOrEmpty(result) ? null : result; // 空值視為未設定
                     }
                 }
@@ -333,7 +376,9 @@ namespace OrchX
                                  "GEMINI_FAST_MODEL=\n\n" +
                                  "# Ollama 網址 (選填，預設為 http://localhost:11434)\n" +
                                  "OLLAMA_URL=\n" +
-                                 "OLLAMA_MODEL=gemma4\n";
+                                 "OLLAMA_MODEL=gemma4\n\n" +
+                                 "# 非互動環境 (管線/排程/重導向) 下是否自動同意危險操作的確認提示 (選填，true 開啟；預設無人回應時拒絕)\n" +
+                                 "AUTO_APPROVE=\n";
                 
                 try
                 {

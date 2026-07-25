@@ -144,5 +144,13 @@ namespace OrchX.Agents
             }
             return null;
         }
+
+        /// <summary>
+        /// 取得選填字串參數；參數不存在或值為 JSON null 時回傳預設值，避免 NullReferenceException。
+        /// </summary>
+        protected static string GetOptionalString(Dictionary<string, object> args, string key, string defaultValue = null)
+        {
+            return args.TryGetValue(key, out var value) && value != null ? value.ToString() : defaultValue;
+        }
     }
 }

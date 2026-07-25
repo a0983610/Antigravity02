@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 using OrchX.AIClient;
+using OrchX.AIClient.Models;
+using OrchX.Config;
 using OrchX.Tools;
 using OrchX.UI;
 
@@ -55,6 +57,14 @@ namespace OrchX.Agents
 
         protected string SystemInstruction { get; set; }
 
+        /// <summary>
+        /// 更新系統指令，於下一次 API 請求時生效。
+        /// </summary>
+        public void UpdateSystemInstruction(string systemInstruction)
+        {
+            SystemInstruction = systemInstruction;
+        }
+
         protected List<object> ToolDeclarations;
         protected List<object> ChatHistory; // 保存完整對話紀錄
         private bool _modelSwitchHappenedInThisTurn = false; // 追蹤此輪是否觸發模型切換
@@ -65,8 +75,15 @@ namespace OrchX.Agents
         // 是否附加系統環境與工作區等固定資訊 (預設不加)
         public bool EnableSystemFixedInfo { get; set; } = false;
         
+        // 是否在用戶的第一句附加固定資訊 (預設不加)
+        public bool EnableFirstPromptFixedInfo { get; set; } = false;
+        
         // 歷史紀錄壓縮 Token 閾值
         public int TokenThresholdForCompression { get; set; } = 100000;
+
+        // 連續壓縮失敗達上限後停止嘗試，避免歷史已超過摘要模型上限時每輪重發注定失敗的請求
+        private int _consecutiveCompressionFailures = 0;
+        private const int MaxCompressionFailures = 3;
 
         private bool _hasWorkspaceExceededLimit = false;
 
@@ -98,6 +115,7 @@ namespace OrchX.Agents
             bool continueLoop = true;
             int currentIteration = 0;
             const int maxIterations = 30;
+            int accumulatedTokensThisTurn = 0;
 
             while (continueLoop && currentIteration < maxIterations)
             {
@@ -116,10 +134,18 @@ namespace OrchX.Agents
 
                     var data = JsonTools.Deserialize<Dictionary<string, object>>(rawJson);
 
-                    await HandleTokenUsageAsync(data, currentModelName, sw.ElapsedMilliseconds, ui, cancellationToken);
+                    int currentTokens = await HandleTokenUsageAsync(data, currentModelName, sw.ElapsedMilliseconds, ui, cancellationToken);
+                    accumulatedTokensThisTurn += currentTokens;
 
                     var parts = Client.ExtractResponseParts(data, out var modelContent);
-                    if (parts == null) break;
+                    if (parts == null)
+                    {
+                        string noResponseReason = ExtractNoResponseReason(data);
+                        ui.ReportError(string.IsNullOrEmpty(noResponseReason)
+                            ? "模型未回傳可用內容，本輪對話結束。"
+                            : $"模型未回傳可用內容 ({noResponseReason})，本輪對話結束。");
+                        break;
+                    }
 
                     ChatHistory.Add(modelContent);
 
@@ -170,6 +196,16 @@ namespace OrchX.Agents
             string finalPrompt = EnableTimestampHeader ? 
                 $"[Current Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}]\n{userPrompt}" : 
                 userPrompt;
+
+            if (EnableFirstPromptFixedInfo && ChatHistory.Count == 0)
+            {
+                string additionalInfo = BuildFirstPromptFixedInfo();
+                if (!string.IsNullOrWhiteSpace(additionalInfo))
+                {
+                    finalPrompt = $"{additionalInfo}\n{finalPrompt}";
+                }
+            }
+
             ChatHistory.Add(Client.BuildMessageContent("user", finalPrompt));
         }
 
@@ -209,7 +245,7 @@ namespace OrchX.Agents
         /// <summary>
         /// 處理並記錄 API 的 Token 使用量，若超過閾值則觸發歷史紀錄壓縮。
         /// </summary>
-        private async Task HandleTokenUsageAsync(Dictionary<string, object> data, string modelName, long elapsedMs, IAgentUI ui, System.Threading.CancellationToken cancellationToken = default)
+        private async Task<int> HandleTokenUsageAsync(Dictionary<string, object> data, string modelName, long elapsedMs, IAgentUI ui, System.Threading.CancellationToken cancellationToken = default)
         {
             var (promptTokens, candidateTokens, totalTokens) = Client.ExtractTokenUsage(data);
             UsageLogger.LogApiUsage(modelName, elapsedMs, promptTokens, candidateTokens, totalTokens);
@@ -218,14 +254,45 @@ namespace OrchX.Agents
             {
                 await CompressHistoryAsync(ui, cancellationToken);
             }
+
+            return totalTokens;
         }
 
         /// <summary>
-        /// 收集並建構要固定附加於系統提示之前的環境或背景資訊。
-        /// 包含系統環境、可用技能 (Skills)、知識庫索引與工作區檔案清單等。
-        /// 子類別可覆寫此方法以自訂或擴充附加的內容。
+        /// 從回應資料中提取模型未回傳內容的原因 (如安全阻擋、達到長度上限)，僅供 UI 顯示。
         /// </summary>
-        protected virtual string BuildSystemFixedInfo()
+        private static string ExtractNoResponseReason(Dictionary<string, object> data)
+        {
+            try
+            {
+                if (data == null) return null;
+
+                if (data.TryGetValue("candidates", out var candidatesObj) &&
+                    candidatesObj is System.Collections.ArrayList candidates && candidates.Count > 0 &&
+                    candidates[0] is Dictionary<string, object> firstCandidate &&
+                    firstCandidate.TryGetValue("finishReason", out var finishReason) && finishReason != null)
+                {
+                    return $"finishReason: {finishReason}";
+                }
+
+                if (data.TryGetValue("promptFeedback", out var feedbackObj) &&
+                    feedbackObj is Dictionary<string, object> feedback &&
+                    feedback.TryGetValue("blockReason", out var blockReason) && blockReason != null)
+                {
+                    return $"blockReason: {blockReason}";
+                }
+            }
+            catch
+            {
+                // 提取原因僅供顯示，失敗不影響主流程
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 收集並建構共用的固定系統資訊。
+        /// </summary>
+        protected string GetSharedFixedInfo()
         {
             var fileTools = new FileTools();
             string skillsData = fileTools.ReadSkills(fileTools.SkillsPath);
@@ -270,6 +337,25 @@ namespace OrchX.Agents
             }
 
             return additionalInfo.TrimEnd() + "\n";
+        }
+
+        /// <summary>
+        /// 收集並建構要固定附加於系統提示之前的環境或背景資訊。
+        /// 包含系統環境、可用技能 (Skills)、知識庫索引與工作區檔案清單等。
+        /// 子類別可覆寫此方法以自訂或擴充附加的內容。
+        /// </summary>
+        protected virtual string BuildSystemFixedInfo()
+        {
+            return GetSharedFixedInfo();
+        }
+
+        /// <summary>
+        /// 收集並建構要附加於使用者第一次提問之前的固定資訊。
+        /// 子類別可覆寫此方法以自訂或擴充附加的內容。
+        /// </summary>
+        protected virtual string BuildFirstPromptFixedInfo()
+        {
+            return GetSharedFixedInfo();
         }
 
 
@@ -389,6 +475,7 @@ namespace OrchX.Agents
         private async Task CompressHistoryAsync(IAgentUI ui, System.Threading.CancellationToken cancellationToken = default)
         {
             if (ChatHistory.Count < 6) return;
+            if (_consecutiveCompressionFailures >= MaxCompressionFailures) return;
 
             int actualSplitIndex = FindCompressSplitIndex();
             if (actualSplitIndex <= 0)
@@ -402,17 +489,17 @@ namespace OrchX.Agents
             var historyToCompress = ChatHistory.GetRange(0, actualSplitIndex);
             string jsonToCompress = JsonTools.Serialize(historyToCompress);
 
-            string compressPrompt = "請將以下歷史對話紀錄進行詳細摘要，保留重要的上下文、決策過程、變數設定與關鍵資訊。\n" +
-                                    "此外，如果有任何明確的、未來可能會用到的確切資訊（例如特定的路徑、命令、設定值、剛剛確定的規則），請將這些明確資訊獨立列出。\n" +
-                                    "請嚴格使用以下 XML 標籤格式輸出：\n" +
-                                    "<Summary>\n你的摘要內容\n</Summary>\n" +
-                                    "<Knowledge>\n明確資訊（條列式）\n</Knowledge>\n\n" +
-                                    "歷史對話紀錄如下：\n" + jsonToCompress;
+            string compressPrompt = AgentConfig.GetHistoryCompressionPrompt(jsonToCompress);
 
             try
             {
                 string resultText = await GenerateSummaryAsync(compressPrompt, cancellationToken);
-                if (resultText != null)
+                if (string.IsNullOrWhiteSpace(resultText))
+                {
+                    UsageLogger.LogError("CompressHistory: 摘要模型未回傳有效文字，跳過本次壓縮");
+                    RegisterCompressionFailure();
+                }
+                else
                 {
                     string summaryText = resultText;
                     string knowledgeText = "";
@@ -442,12 +529,34 @@ namespace OrchX.Agents
                         }
                     }
 
-                    ApplyHistoryCompression(actualSplitIndex, summaryText, ui);
+                    if (string.IsNullOrWhiteSpace(summaryText))
+                    {
+                        UsageLogger.LogError("CompressHistory: 摘要內容為空，跳過本次壓縮");
+                        RegisterCompressionFailure();
+                    }
+                    else
+                    {
+                        ApplyHistoryCompression(actualSplitIndex, summaryText, ui);
+                        _consecutiveCompressionFailures = 0;
+                    }
                 }
             }
             catch (Exception ex)
             {
                 UsageLogger.LogError($"History Compression Error: {ex.Message}");
+                RegisterCompressionFailure();
+            }
+        }
+
+        /// <summary>
+        /// 累計壓縮失敗次數，達上限時記錄並停止後續嘗試 (於 ClearChatHistory / LoadChatHistory 重置)。
+        /// </summary>
+        private void RegisterCompressionFailure()
+        {
+            _consecutiveCompressionFailures++;
+            if (_consecutiveCompressionFailures == MaxCompressionFailures)
+            {
+                UsageLogger.LogError($"CompressHistory: 已連續失敗 {MaxCompressionFailures} 次，停止自動壓縮嘗試 (於 /new 或 /load 後重置)");
             }
         }
 
@@ -484,7 +593,8 @@ namespace OrchX.Agents
             string rawJson = await FastClient.GenerateContentAsync(request, cancellationToken);
             var data = JsonTools.Deserialize<Dictionary<string, object>>(rawJson);
 
-            return FastClient.ExtractTextFromResponseData(data) ?? "摘要失敗";
+            // 解析不到文字時回傳 null，由呼叫端跳過壓縮，不可用替代字串頂替摘要
+            return FastClient.ExtractTextFromResponseData(data);
         }
 
         /// <summary>
@@ -504,6 +614,15 @@ namespace OrchX.Agents
         public void ClearChatHistory()
         {
             ChatHistory.Clear();
+            _consecutiveCompressionFailures = 0;
+        }
+
+        /// <summary>
+        /// 相對路徑一律以執行檔目錄為基準，與 .env / logs / AI_Workspace 的存放位置一致，避免檔案散落在啟動目錄。
+        /// </summary>
+        private static string ResolveToBaseDirectory(string filePath)
+        {
+            return Path.IsPathRooted(filePath) ? filePath : Path.Combine(AppContext.BaseDirectory, filePath);
         }
 
         /// <summary>
@@ -513,6 +632,7 @@ namespace OrchX.Agents
         {
             try
             {
+                filePath = ResolveToBaseDirectory(filePath);
                 string json = JsonTools.Serialize(ChatHistory);
                 File.WriteAllText(filePath, json);
                 return true;
@@ -531,6 +651,7 @@ namespace OrchX.Agents
         {
             try
             {
+                filePath = ResolveToBaseDirectory(filePath);
                 if (!File.Exists(filePath))
                 {
                     UsageLogger.LogError($"LoadChatHistory Error: File not found: {filePath}");
@@ -543,6 +664,7 @@ namespace OrchX.Agents
                 {
                     ChatHistory.Clear();
                     ChatHistory.AddRange(history);
+                    _consecutiveCompressionFailures = 0;
                     return true;
                 }
                 return false;
